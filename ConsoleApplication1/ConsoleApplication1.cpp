@@ -7,10 +7,6 @@
 #include "ConsoleApplication1.h"
 #include<math.h>
 using namespace std;
-
-
-int forLoopOptimize = 1;
-int mode = 0;
 class point
 {
 	private:
@@ -35,6 +31,9 @@ class point
 		}
 };
 list<point> pointList;
+point lineTemp = point(NULL, NULL);
+int lineCounter = 0;
+int mode = 0; //  d,l,p,o,c,r,q
 //int rounding(double num, int index = 0)
 //{
 //	bool isNegative = false; // whether is negative number or not
@@ -107,24 +106,22 @@ void drawLine(point src,point des) {
 		src.setX(temp.getX());
 		src.setY(temp.getY());
 		cout << "switch   \n\n";
-	}
-	//switch end
+	}//switch end
 	//cout << src.getX() << " " << src.getY() << " " << des.getX() << " " << des.getY() << "\n\n";  //debug
 	int dy = des.getY() - src.getY();
 	dx = des.getX() - src.getX();
 	int x = src.getX();
 	int y = src.getY();
 	float slope = dy / (float)dx;
-	cout<<slope<<" " << dx << " " << dy << " " << "\n";  //debug
+	int direction = slope > 0 ? 1 : (slope = -slope, -1);  //0<slope<∞
+	//cout<<slope<<" " << dx << " " << dy << " " << "\n";  //debug
 	if (dy == 0) {  //slope =0
 		for (int tempX = min(src.getX(), des.getX()); tempX < max(src.getX(), des.getX()); tempX++) {
 			pointList.push_back(point(tempX, des.getY()));
 		}
-
 	}
 	else if (dx == 0) //slope=∞
 	{
-
 		for (int tempY = min(src.getY(), des.getY()); tempY < max(src.getY(), des.getY()); tempY += 1)
 		{
 			pointList.push_back(point(des.getX(), tempY));
@@ -149,9 +146,9 @@ void drawLine(point src,point des) {
 
 		//}
 		*/
-		float d_init = dy + (float)dx / 2;
-		int incE = dy;
-		int incNE = dy - dx;
+		float d_init = dy*direction + (float)dx / 2;
+		int incE = dy * direction;
+		int incNE = dy * direction - dx;
 		float d = d_init;
 		pointList.push_back(point(x, y));
 		while (x <= des.getX())
@@ -167,7 +164,7 @@ void drawLine(point src,point des) {
 			{
 				pointList.push_back(point(x, y));
 				x += 1;
-				y += 1;
+				y += direction;
 				//cout << x <<" " << y << "\n";  //debug
 				d += incNE;
 			}
@@ -176,18 +173,18 @@ void drawLine(point src,point des) {
 
 	else if (slope > 1) //slope>1 then switch (y,x)
 	{
-		float d_init = dx + (float)dy / 2;
+		float d_init = dx + (float)dy*direction / 2;
 		int incE = dx;
-		int incNE = dx - dy;
+		int incNE = dx - dy*direction;
 		float d = d_init;
 		
 		pointList.push_back(point(x, y));
-		while (y <= des.getY())
+		while (y*direction <= des.getY()*direction)
 		{
-			cout << d << "\n\n";  //debug
+			//cout << d << "\n\n";  //debug
 			if (d <= 0) {
 				pointList.push_back(point(x, y));
-				y += 1;
+				y += direction;
 				//cout << x <<" " << y << "\n";  //debug
 				d += incE;
 			}
@@ -195,73 +192,69 @@ void drawLine(point src,point des) {
 			{
 				pointList.push_back(point(x, y));
 				x += 1;
-				y += 1;
+				y += direction;
 				//cout << x <<" " << y << "\n";  //debug
 				d += incNE;
 			}
 		}
 	}
-	else if (slope<0 && slope>-1) {
-		float d_init = -dy + (float)dx / 2;  //y*-1
-		int incE = -dy ; //y*-1
-		int incNE = -dy-dx;//y*-1
-		float d = d_init;
-		pointList.push_back(point(x, y));
-		while (x <= des.getX())
-		{
-			
-			//cout << d <<" "<<incE<<" "<<incNE << "\n\n";  //debug
-			if (d <= 0) {
-				pointList.push_back(point(x, y));
-				x += 1;
-				//cout << x <<" " << y << "\n";  //debug
-				d += incE;
-			}
-			else
-			{
-				pointList.push_back(point(x, y));
-				x += 1;
-				y -= 1;  //y*-1
-				//cout << x <<" " << y << "\n";  //debug
-				d += incNE;
-			}
-		}
-	}
-	else if (slope < -1) {
-		float d_init = dx - (float)dy / 2;   //y*-1
-		int incE = dx;
-		int incNE = dx + dy;   //y*-1
-		float d = d_init;
-
-		pointList.push_back(point(x, y));
-		while (y >= des.getY())   //<=  ->  >=
-		{
-			cout << d << "\n\n";  //debug
-			if (d <= 0) {
-				pointList.push_back(point(x, y));
-				y -= 1;  //y*-1
-				cout << x <<" " << y << "\n";  //debug
-				d += incE;
-			}
-			else
-			{
-				pointList.push_back(point(x, y));
-				x += 1;
-				y -= 1;   //y*-1
-				cout << x <<" " << y << "\n";  //debug
-				d += incNE;
-			}
-		}
-	}
-
-	//cout << pointList.back().getX()<<" "<<pointList.back().getY()<<"\n";
 	
-
+	//else if (slope < -1) {
+	//	float d_init = dx - (float)dy / 2;   //y*-1
+	//	int incE = dx;
+	//	int incNE = dx + dy;   //y*-1
+	//	float d = d_init;
+	//	pointList.push_back(point(x, y));
+	//	while (y >= des.getY())   //<=  ->  >=
+	//	{
+	//		cout << d << "\n\n";  //debug
+	//		if (d <= 0) {
+	//			pointList.push_back(point(x, y));
+	//			y -= 1;  //y*-1
+	//			cout << x <<" " << y << "\n";  //debug
+	//			d += incE;
+	//		}
+	//		else
+	//		{
+	//			pointList.push_back(point(x, y));
+	//			x += 1;
+	//			y -= 1;   //y*-1
+	//			cout << x <<" " << y << "\n";  //debug
+	//			d += incNE;
+	//		}
+	//	}
+	//}
+	// 
+	//else if (slope<0 && slope>-1) {
+	//float d_init = -dy + (float)dx / 2;  //y*-1
+	//int incE = -dy; //y*-1
+	//int incNE = -dy - dx;//y*-1
+	//float d = d_init;
+	//pointList.push_back(point(x, y));
+	//while (x <= des.getX())
+	//{
+	//	//cout << d <<" "<<incE<<" "<<incNE << "\n\n";  //debug
+	//	if (d <= 0) {
+	//		pointList.push_back(point(x, y));
+	//		x += 1;
+	//		//cout << x <<" " << y << "\n";  //debug
+	//		d += incE;
+	//	}
+	//	else
+	//	{
+	//		pointList.push_back(point(x, y));
+	//		x += 1;
+	//		y -= 1;  //y*-1
+	//		//cout << x <<" " << y << "\n";  //debug
+	//		d += incNE;
+	//	}
+	//}
+	//}
+	//cout << pointList.back().getX()<<" "<<pointList.back().getY()<<"\n";
 	//else  //有斜率or = 0
 	//{
 	//	for (int tempX = min(src.getX() + 1,des.getX()+1); tempX < max(des.getX(),src.getX()); tempX+= forLoopOptimize)
 	//	{
-
 	//		float tempY = (float)src.getY() + (tempX-src.getX())*(des.getY() - src.getY()) / (float)(des.getX() - src.getX());
 	//		point temp=edgeCheck(tempX, tempY);
 	//		pointList.push_back(temp);
@@ -271,10 +264,32 @@ void drawLine(point src,point des) {
 }
 
 void mouse(int bin, int state, int x, int y) {
-	point temp=point(x ,y);
-	if (state == GLUT_DOWN) {
-		pointList.push_back(temp);
+	switch (mode)
+	{
+	case 1:
+		pointList.push_back(point(x,y));
+		break;
+	case 2:
+		lineCounter+=1;
+		cout << lineCounter<<endl;
+		if ((lineCounter%4)!=0 && state==GLUT_UP)
+		{
+			lineTemp.setX(x);
+			lineTemp.setY(y);
+		}
+		else if((lineCounter % 4) == 0 && state == GLUT_UP)
+		{
+			cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
+			drawLine(lineTemp, point(x, y));
+		}
+		break;
+	default:
+		break;
 	}
+	//point temp=point(x ,y);
+	//if (state == GLUT_DOWN) {
+	//	pointList.push_back(temp);
+	//}
 	list<point> ::iterator point;
 	for (point = pointList.begin(); point != pointList.end();point++) {
 		drawSquare(point->getX(), point->getY());
@@ -282,6 +297,32 @@ void mouse(int bin, int state, int x, int y) {
 	glutSwapBuffers();
 
 	//if (bin == GLUT_LEFT_BUTTON && state == GLUT_DOWN) drawSquare(x, y);
+}
+void keyBoard(unsigned char key, int x, int y) {
+	//cout << key <<" "<<x<<" "<<y << endl; //debug
+	switch (key)
+	{
+		case 'd': //point
+			mode = 1;
+			break;
+		case 'l': //line
+			mode = 2;
+			break;
+		case 'p': //polygon
+			mode = 3;
+			break;
+		case 'o': //circle
+			mode = 4;
+			break;
+		case 'c': //clear
+			break;
+		case 'r': //recover
+			break;
+		case 'q': //quit
+			break;
+	default:
+		break;
+	}
 }
 
 int main(int argc, char** argv) {
@@ -292,9 +333,14 @@ int main(int argc, char** argv) {
 	gluOrtho2D(0, 500, 0, 500);
 	glutCreateWindow("Your First GLUT  Window!");
 	//drawCycle(point(250, 250), point(250,200)); //debug
-	drawLine(point(0, 500), point(250,50));  //debug
+	//drawLine(point(0, 500), point(250,50));  //debug
+	//drawLine(point(0, 0), point(11, 22));
+	//drawLine(point(0, 0), point(22, 11));
+	//drawLine(point(50, 50), point(11, 33));
+	//drawLine(point(50, 50), point(33, 11));
 	glutDisplayFunc(display);
 	glutMouseFunc(mouse);
+	glutKeyboardFunc(keyBoard);
 	gluOrtho2D(0, 500, 0, 500);
 	glutSwapBuffers();
 	glutMainLoop();
