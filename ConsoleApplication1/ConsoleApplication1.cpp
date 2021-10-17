@@ -32,8 +32,11 @@ class point
 };
 list<point> pointList;
 point lineTemp = point(NULL, NULL);
+point cycleTemp = point(NULL, NULL);
+int cycleCounter = 0;
 int lineCounter = 0;
 int mode = 0; //  d,l,p,o,c,r,q
+
 //int rounding(double num, int index = 0)
 //{
 //	bool isNegative = false; // whether is negative number or not
@@ -81,7 +84,50 @@ void drawSquare(int x, int y) {
 	glEnd();
 
 }
+void cycle1to8(point centre, point p_0) {
+	point p_1 = point(p_0.getY(), p_0.getX());
+	point p_2 = point(p_0.getY(), (-1)*p_0.getX());
+	point p_3 = point(p_0.getX(), (-1)*p_0.getY());
+	point p_4 = point((-1)*p_0.getX(), (-1)*p_0.getY());
+	point p_5 = point((-1)*p_0.getY(), (-1)*p_0.getX());
+	point p_6 = point((-1)*p_0.getY(), p_0.getX());
+	point p_7 = point((-1)*p_0.getX(), p_0.getY());
+
+	pointList.push_back(point(centre.getX() + p_0.getX(), centre.getY() + p_0.getY()));
+	pointList.push_back(point(centre.getX() + p_1.getX(), centre.getY() + p_1.getY()));
+	pointList.push_back(point(centre.getX() + p_2.getX(), centre.getY() + p_2.getY()));
+	pointList.push_back(point(centre.getX() + p_3.getX(), centre.getY() + p_3.getY()));
+	pointList.push_back(point(centre.getX() + p_4.getX(), centre.getY() + p_4.getY()));
+	pointList.push_back(point(centre.getX() + p_5.getX(), centre.getY() + p_5.getY()));
+	pointList.push_back(point(centre.getX() + p_6.getX(), centre.getY() + p_6.getY()));
+	pointList.push_back(point(centre.getX() + p_7.getX(), centre.getY() + p_7.getY()));
+
+
+
+}
 void drawCycle(point centre, point cyclePoint) {  //超出邊界(?
+	double radius = pow(pow((cyclePoint.getX() - centre.getX()), 2) + pow((cyclePoint.getY() - centre.getY()), 2), 0.5);
+	list<point> cyclelist;
+	point cycle = point(0, int(radius)); //init
+	cycle1to8(centre, cycle);
+	double d = 5 / 4 - radius;  //init
+	while (cycle.getX()<cycle.getY())
+	{
+		if (d < 0) {
+			d += cycle.getX() * 2 + 3;
+			cycle.setX(cycle.getX() + 1);
+		}
+		else
+		{
+			d += (cycle.getX() - cycle.getY()) * 2 + 5;
+			cycle.setX(cycle.getX() + 1);
+			cycle.setY(cycle.getY() - 1);
+		}
+		cycle1to8(centre, cycle);
+		//cout << cycleTemp.getX() << " " << cycleTemp.getY()<<endl; //debug
+	}
+
+
 	//float x_2 = pow((cyclePoint.getX() - centre.getX()), 2);
 	//float y_2 = pow((cyclePoint.getY() - centre.getY()), 2);
 	//float radius = pow((x_2 + y_2), 0.5);
@@ -267,11 +313,12 @@ void mouse(int bin, int state, int x, int y) {
 	switch (mode)
 	{
 	case 1:
+		if(state== GLUT_UP)
 		pointList.push_back(point(x,y));
 		break;
 	case 2:
 		lineCounter+=1;
-		cout << lineCounter<<endl;
+		//cout << lineCounter<<" " <<state<< endl;
 		if ((lineCounter%4)!=0 && state==GLUT_UP)
 		{
 			lineTemp.setX(x);
@@ -281,6 +328,21 @@ void mouse(int bin, int state, int x, int y) {
 		{
 			cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
 			drawLine(lineTemp, point(x, y));
+		}
+		break;
+	case 3:
+		break;
+	case 4:
+		cycleCounter += 1;
+		if ((cycleCounter % 4) != 0 && state == GLUT_UP)
+		{
+			cycleTemp.setX(x);
+			cycleTemp.setY(y);
+		}
+		else if ((cycleCounter % 4) == 0 && state == GLUT_UP)
+		{
+			cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
+			drawCycle(cycleTemp, point(x, y));
 		}
 		break;
 	default:
@@ -332,7 +394,7 @@ int main(int argc, char** argv) {
 	glutInitWindowPosition(100, 100);
 	gluOrtho2D(0, 500, 0, 500);
 	glutCreateWindow("Your First GLUT  Window!");
-	//drawCycle(point(250, 250), point(250,200)); //debug
+	drawCycle(point(250, 250), point(250,200)); //debug
 	//drawLine(point(0, 500), point(250,50));  //debug
 	//drawLine(point(0, 0), point(11, 22));
 	//drawLine(point(0, 0), point(22, 11));
