@@ -77,7 +77,7 @@ void display() {
 	glFlush();
 }
 void quit() {
-	glutLeaveMainLoop();
+	exit(1);
 }
 
 void drawSquare(int x, int y) {
