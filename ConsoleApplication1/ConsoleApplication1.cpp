@@ -31,9 +31,13 @@ class point
 		}
 };
 list<point> pointList;
+list<point> pointListBackUp;
+
 point lineTemp = point(NULL, NULL);
-point cycleTemp = point(NULL, NULL);
-int cycleCounter = 0;
+point circleTemp = point(NULL, NULL);
+point polygonSrc = point(NULL, NULL);
+point polygontemp = point(NULL, NULL);
+int circleCounter = 0;
 int lineCounter = 0;
 int mode = 0; //  d,l,p,o,c,r,q
 
@@ -72,8 +76,8 @@ void display() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glFlush();
 }
-void clear() {
-
+void quit() {
+	glutLeaveMainLoop();
 }
 
 void drawSquare(int x, int y) {
@@ -84,7 +88,33 @@ void drawSquare(int x, int y) {
 	glEnd();
 
 }
-void cycle1to8(point centre, point p_0) {
+void drawAllPoint() {
+	glClear(GL_COLOR_BUFFER_BIT);
+	list<point> ::iterator point;
+	for (point = pointList.begin(); point != pointList.end(); point++) {
+		drawSquare(point->getX(), point->getY());
+	}
+	glutSwapBuffers();
+}
+
+void recover() {
+	list<point> ::iterator pointIterator;
+	for (pointIterator = pointListBackUp.begin(); pointIterator != pointListBackUp.end(); pointIterator++) {
+		pointList.push_back(point(pointIterator->getX(), pointIterator->getY()));
+	}
+	pointListBackUp.clear();
+	drawAllPoint();
+}
+void clear() {
+	list<point> ::iterator pointIterator;
+	for (pointIterator = pointList.begin(); pointIterator != pointList.end(); pointIterator++) {
+		pointListBackUp.push_back(point(pointIterator->getX(), pointIterator->getY()));
+	}
+	pointList.clear();
+	drawAllPoint();
+
+}
+void circle1to8(point centre, point p_0) {
 	point p_1 = point(p_0.getY(), p_0.getX());
 	point p_2 = point(p_0.getY(), (-1)*p_0.getX());
 	point p_3 = point(p_0.getX(), (-1)*p_0.getY());
@@ -105,31 +135,31 @@ void cycle1to8(point centre, point p_0) {
 
 
 }
-void drawCycle(point centre, point cyclePoint) {  //超出邊界(?
-	double radius = pow(pow((cyclePoint.getX() - centre.getX()), 2) + pow((cyclePoint.getY() - centre.getY()), 2), 0.5);
-	list<point> cyclelist;
-	point cycle = point(0, int(radius)); //init
-	cycle1to8(centre, cycle);
+void drawCircle(point centre, point circlePoint) {  //超出邊界(?
+	double radius = pow(pow((circlePoint.getX() - centre.getX()), 2) + pow((circlePoint.getY() - centre.getY()), 2), 0.5);
+	list<point> circlelist;
+	point circle = point(0, int(radius)); //init
+	circle1to8(centre, circle);
 	double d = 5 / 4 - radius;  //init
-	while (cycle.getX()<cycle.getY())
+	while (circle.getX()<circle.getY())
 	{
 		if (d < 0) {
-			d += cycle.getX() * 2 + 3;
-			cycle.setX(cycle.getX() + 1);
+			d += circle.getX() * 2 + 3;
+			circle.setX(circle.getX() + 1);
 		}
 		else
 		{
-			d += (cycle.getX() - cycle.getY()) * 2 + 5;
-			cycle.setX(cycle.getX() + 1);
-			cycle.setY(cycle.getY() - 1);
+			d += (circle.getX() - circle.getY()) * 2 + 5;
+			circle.setX(circle.getX() + 1);
+			circle.setY(circle.getY() - 1);
 		}
-		cycle1to8(centre, cycle);
-		//cout << cycleTemp.getX() << " " << cycleTemp.getY()<<endl; //debug
+		circle1to8(centre, circle);
+		//cout << circleTemp.getX() << " " << circleTemp.getY()<<endl; //debug
 	}
 
 
-	//float x_2 = pow((cyclePoint.getX() - centre.getX()), 2);
-	//float y_2 = pow((cyclePoint.getY() - centre.getY()), 2);
+	//float x_2 = pow((circlePoint.getX() - centre.getX()), 2);
+	//float y_2 = pow((circlePoint.getY() - centre.getY()), 2);
 	//float radius = pow((x_2 + y_2), 0.5);
 	//pointList.push_back(point(centre.getX() + (int)radius, centre.getY()));
 	//pointList.push_back(point(centre.getX() - (int)radius, centre.getY()));
@@ -141,7 +171,10 @@ void drawCycle(point centre, point cyclePoint) {  //超出邊界(?
 
 	//}
 }
-
+//void drawPolygon()    //drawLine is enough
+//{              
+//
+//}
 void drawLine(point src,point des) {
 	int dx = des.getX() - src.getX();
 
@@ -309,40 +342,70 @@ void drawLine(point src,point des) {
 
 }
 
-void mouse(int bin, int state, int x, int y) {
+void mouse(int button, int state, int x, int y) {
 	switch (mode)
 	{
-	case 1:
+	case 1:   //point
 		if(state== GLUT_UP)
 		pointList.push_back(point(x,y));
 		break;
-	case 2:
-		lineCounter+=1;
+	case 2:  //line
+		if (state == GLUT_UP)
+		{
+			lineCounter += 1;
+			if ((lineCounter % 2) != 0 && state == GLUT_UP)
+			{
+				lineTemp.setX(x);
+				lineTemp.setY(y);
+			}
+			else if ((lineCounter % 2) == 0 && state == GLUT_UP)
+			{
+				cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;   //debug
+				drawLine(lineTemp, point(x, y));
+			}
+		}
 		//cout << lineCounter<<" " <<state<< endl;
-		if ((lineCounter%4)!=0 && state==GLUT_UP)
+		
+		break;
+	case 3:  //polygon
+		if (state ==GLUT_UP)
 		{
-			lineTemp.setX(x);
-			lineTemp.setY(y);
-		}
-		else if((lineCounter % 4) == 0 && state == GLUT_UP)
-		{
-			cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
-			drawLine(lineTemp, point(x, y));
+			if (button==GLUT_LEFT_BUTTON)
+			{
+				if (polygontemp.getX()==NULL &&polygontemp.getY()==NULL)
+				{
+					polygonSrc.setX(x);
+					polygonSrc.setY(y);
+					polygontemp.setX(x);
+					polygontemp.setY(y);
+				}
+				else
+				{
+					drawLine(polygontemp, point(x, y));
+					polygontemp.setX(x);
+					polygontemp.setY(y);
+				}
+			}
+			else if (button==GLUT_RIGHT_BUTTON)
+			{
+				drawLine(polygontemp, polygonSrc);
+				polygontemp.setX(NULL);
+				polygontemp.setY(NULL);
+
+			}
 		}
 		break;
-	case 3:
-		break;
-	case 4:
-		cycleCounter += 1;
-		if ((cycleCounter % 4) != 0 && state == GLUT_UP)
+	case 4:  //circle
+		circleCounter += 1;
+		if ((circleCounter % 4) != 0 && state == GLUT_UP)
 		{
-			cycleTemp.setX(x);
-			cycleTemp.setY(y);
+			circleTemp.setX(x);
+			circleTemp.setY(y);
 		}
-		else if ((cycleCounter % 4) == 0 && state == GLUT_UP)
+		else if ((circleCounter % 4) == 0 && state == GLUT_UP)
 		{
 			cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
-			drawCycle(cycleTemp, point(x, y));
+			drawCircle(circleTemp, point(x, y));
 		}
 		break;
 	default:
@@ -352,14 +415,11 @@ void mouse(int bin, int state, int x, int y) {
 	//if (state == GLUT_DOWN) {
 	//	pointList.push_back(temp);
 	//}
-	list<point> ::iterator point;
-	for (point = pointList.begin(); point != pointList.end();point++) {
-		drawSquare(point->getX(), point->getY());
-	}
-	glutSwapBuffers();
+	drawAllPoint();
 
 	//if (bin == GLUT_LEFT_BUTTON && state == GLUT_DOWN) drawSquare(x, y);
 }
+
 void keyBoard(unsigned char key, int x, int y) {
 	//cout << key <<" "<<x<<" "<<y << endl; //debug
 	switch (key)
@@ -377,10 +437,14 @@ void keyBoard(unsigned char key, int x, int y) {
 			mode = 4;
 			break;
 		case 'c': //clear
+			clear();
 			break;
 		case 'r': //recover
+			recover();
 			break;
 		case 'q': //quit
+			quit();
+
 			break;
 	default:
 		break;
@@ -394,7 +458,7 @@ int main(int argc, char** argv) {
 	glutInitWindowPosition(100, 100);
 	gluOrtho2D(0, 500, 0, 500);
 	glutCreateWindow("Your First GLUT  Window!");
-	drawCycle(point(250, 250), point(250,200)); //debug
+	//drawCircle(point(250, 250), point(250,200)); //debug
 	//drawLine(point(0, 500), point(250,50));  //debug
 	//drawLine(point(0, 0), point(11, 22));
 	//drawLine(point(0, 0), point(22, 11));
