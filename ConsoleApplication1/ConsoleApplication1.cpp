@@ -360,7 +360,7 @@ void mouse(int button, int state, int x, int y) {
 			}
 			else if ((lineCounter % 2) == 0 && state == GLUT_UP)
 			{
-				cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;   //debug
+				//cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;   //debug
 				drawLine(lineTemp, point(x, y));
 			}
 		}
@@ -396,15 +396,14 @@ void mouse(int button, int state, int x, int y) {
 		}
 		break;
 	case 4:  //circle
-		circleCounter += 1;
-		if ((circleCounter % 4) != 0 && state == GLUT_UP)
+		if (state==GLUT_DOWN)
 		{
 			circleTemp.setX(x);
 			circleTemp.setY(y);
 		}
-		else if ((circleCounter % 4) == 0 && state == GLUT_UP)
+		else if (state == GLUT_UP)
 		{
-			cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
+			//cout << lineTemp.getX() << " " << lineTemp.getY() << " " << x << " " << y << endl;
 			drawCircle(circleTemp, point(x, y));
 		}
 		break;
