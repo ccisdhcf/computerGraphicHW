@@ -6,6 +6,8 @@
 #include <list>
 #include "ConsoleApplication1.h"
 #include<math.h>
+#include <string>
+#include <fstream>
 using namespace std;
 class point
 {
@@ -30,6 +32,8 @@ class point
 			y = new_y;
 		}
 };
+ifstream inputFile;
+
 list<point> pointList;
 list<point> pointListBackUp;
 
@@ -40,6 +44,7 @@ point polygontemp = point(NULL, NULL);
 int circleCounter = 0;
 int lineCounter = 0;
 int mode = 0; //  d,l,p,o,c,r,q
+string fileName = "";
 
 //int rounding(double num, int index = 0)
 //{
@@ -171,10 +176,7 @@ void drawCircle(point centre, point circlePoint) {  //超出邊界(?
 
 	//}
 }
-//void drawPolygon()    //drawLine is enough
-//{              
-//
-//}
+//void drawPolygon(){}    //drawLine is enough
 void drawLine(point src,point des) {
 	int dx = des.getX() - src.getX();
 
@@ -184,7 +186,7 @@ void drawLine(point src,point des) {
 		des.setY(src.getY());
 		src.setX(temp.getX());
 		src.setY(temp.getY());
-		cout << "switch   \n\n";
+		//cout << "switch   \n\n";
 	}//switch end
 	//cout << src.getX() << " " << src.getY() << " " << des.getX() << " " << des.getY() << "\n\n";  //debug
 	int dy = des.getY() - src.getY();
@@ -452,6 +454,21 @@ void keyBoard(unsigned char key, int x, int y) {
 
 int main(int argc, char** argv) {
 	glutInit(&argc, argv);
+	fileName = argv[1];
+	cout << "file name:" << fileName << endl;
+
+	inputFile.open(fileName);
+	string line;
+
+	if (!inputFile.is_open()) {
+		perror("Error open");
+		exit(EXIT_FAILURE);
+	}
+	while (getline(inputFile, line)) {
+		cout << line << endl;
+		system("pause");
+	}
+	inputFile.close();
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(100, 100);
