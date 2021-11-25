@@ -8,6 +8,8 @@
 #include<math.h>
 #include <string>
 #include <fstream>
+#include <vector>
+#include <sstream>     
 using namespace std;
 class point
 {
@@ -36,7 +38,6 @@ ifstream inputFile;
 
 list<point> pointList;
 list<point> pointListBackUp;
-
 point lineTemp = point(NULL, NULL);
 point circleTemp = point(NULL, NULL);
 point polygonSrc = point(NULL, NULL);
@@ -45,6 +46,9 @@ int circleCounter = 0;
 int lineCounter = 0;
 int mode = 0; //  d,l,p,o,c,r,q
 string fileName = "";
+static float matrix[3][3] = { 1.0, 0.0, 0.0,
+							  0.0, 1.0, 0.0,
+							  0.0, 0.0, 1.0 };
 
 //int rounding(double num, int index = 0)
 //{
@@ -466,7 +470,22 @@ int main(int argc, char** argv) {
 	}
 	while (getline(inputFile, line)) {
 		cout << line << endl;
+		char space_char = ' ';
+		vector<string> words{};
+
+		stringstream sstream(line);
+		string word;
+		while (getline(sstream, word, space_char)) {
+			//word.erase(std::remove_if(word.begin(), word.end(), ispunct), word.end());
+			words.push_back(word);
+		}
+
+		for (const auto& str : words) {
+			cout << str << endl;
+		}
+
 		system("pause");
+
 	}
 	inputFile.close();
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
