@@ -10,6 +10,7 @@
 #include <fstream>
 #include <vector>
 #include <sstream>     
+#include <stdlib.h>
 using namespace std;
 class point
 {
@@ -45,10 +46,11 @@ point polygontemp = point(NULL, NULL);
 int circleCounter = 0;
 int lineCounter = 0;
 int mode = 0; //  d,l,p,o,c,r,q
+
 string fileName = "";
-static float matrix[3][3] = { 1.0, 0.0, 0.0,
-							  0.0, 1.0, 0.0,
-							  0.0, 0.0, 1.0 };
+static double defaultMatrix[3][3] = { 1.0, 0.0, 0.0,
+							   0.0, 1.0, 0.0,
+							   0.0, 0.0, 1.0 };
 
 //int rounding(double num, int index = 0)
 //{
@@ -87,6 +89,99 @@ void display() {
 }
 void quit() {
 	exit(1);
+}
+void modeSwitch(string command) {
+	char space_char = ' ';
+	vector<string> words{};
+	istringstream iss(command);
+	for (string command; iss >> command; ) {
+		words.push_back(command);
+	}
+	//stringstream sstream(command);
+	//string word;
+	//while (getline(sstream, word, space_char)) {
+	//	//word.erase(std::remove_if(word.begin(), word.end(), ispunct), word.end());
+	//	//words.push_back(word);
+	//}
+
+	if (!words.empty()) {
+
+		/*for (const auto& str : words) {
+			cout << str << " ";
+		}*/
+		cout <<endl<<words[0]<< endl;
+		//mode select
+		if (words[0]=="scale")
+		{
+			double x = atof(words[1].c_str());
+			double y = atof(words[2].c_str());
+			cout << x << "　" << y << endl;
+		}
+		else if (words[0] == "rotate")
+		{
+			double degree = atof(words[1].c_str());
+			cout << degree << endl;
+		}
+		else if (words[0] == "translate")
+		{
+			double x = atof(words[1].c_str());
+			double y = atof(words[2].c_str());
+			cout << x << "　" << y << endl;
+		}
+		else if (words[0] == "square")
+		{
+			cout << "--square--" << endl;
+		}
+		else if (words[0] == "triangle")
+		{
+			cout << "--triangle--" << endl;
+
+		}
+		else if (words[0] == "view")
+		{
+			cout << "--view--" << endl;
+			double wxl = atof(words[1].c_str());
+			double wxr = atof(words[2].c_str());
+			double wyb = atof(words[3].c_str());
+			double wyt = atof(words[4].c_str());
+			double vxl = atof(words[5].c_str());
+			double vxr = atof(words[6].c_str());
+			double vyb = atof(words[7].c_str());
+			double vyt = atof(words[8].c_str());
+			cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
+
+
+		}
+		else if (words[0] == "clearData")
+		{
+			cout << "--clear data--" << endl;
+
+		}
+		else if (words[0] == "clearScreen")
+		{
+			cout << "--clear screen--" << endl;
+
+		}
+		else if (words[0] == "reset")
+		{
+			cout << "--reset--" << endl;
+
+		}
+		else if (words[0] == "end")
+		{
+			cout << "--end--" << endl;
+
+		}
+		else  // "NULL" or #......
+		{
+			cout << "--skip--" << endl;
+
+		}
+		
+	}
+	
+
+	system("pause");
 }
 
 void drawSquare(int x, int y) {
@@ -470,22 +565,7 @@ int main(int argc, char** argv) {
 	}
 	while (getline(inputFile, line)) {
 		cout << line << endl;
-		char space_char = ' ';
-		vector<string> words{};
-
-		stringstream sstream(line);
-		string word;
-		while (getline(sstream, word, space_char)) {
-			//word.erase(std::remove_if(word.begin(), word.end(), ispunct), word.end());
-			words.push_back(word);
-		}
-
-		for (const auto& str : words) {
-			cout << str << endl;
-		}
-
-		system("pause");
-
+		modeSwitch(line);
 	}
 	inputFile.close();
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
