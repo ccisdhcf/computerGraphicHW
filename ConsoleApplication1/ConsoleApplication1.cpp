@@ -5,12 +5,16 @@
 #include<iostream>
 #include <list>
 #include "ConsoleApplication1.h"
-#include<math.h>
 #include <string>
 #include <fstream>
 #include <vector>
 #include <sstream>     
 #include <stdlib.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include<math.h>
+#include <tuple>
+
 using namespace std;
 class point
 {
@@ -48,9 +52,44 @@ int lineCounter = 0;
 int mode = 0; //  d,l,p,o,c,r,q
 
 string fileName = "";
+
 static double defaultMatrix[3][3] = { 1.0, 0.0, 0.0,
-							   0.0, 1.0, 0.0,
-							   0.0, 0.0, 1.0 };
+								      0.0, 1.0, 0.0,
+									  0.0, 0.0, 1.0 };
+static double transformationMatrix[3][3] = { 1.0, 0.0, 0.0,
+						  				     0.0, 1.0, 0.0,
+									         0.0, 0.0, 1.0 };
+static double squareMatrix[3][4] = { -1.0,-1.0, 1.0, 1.0,
+									   -1.0, 1.0, 1.0,-1.0,
+										1.0, 1.0 ,1.0, 1.0 };
+static double triangleMatrix[3][3] = { 0.0,-1.0, 1.0,
+									   1.0,-1.0,-1.0,
+									   1.0, 1.0, 1.0};
+static double angleTransformationMatrix[3][3] = { 1.0, 0.0, 0.0,
+												  0.0, 1.0, 0.0,
+											      0.0, 0.0, 1.0 };
+static double angle = 0.0;
+
+//world to view
+//tuple<int,int > windowToViewport(double Xw, double Yw, double wxl,double wxr	,double wyb	,double wyt	,double vxl	,double vxr	,double vyb	,double vyt){
+//	double Sx = (vxr - vxl) / (wxr - wxl);
+//	double Sy = (vyt - vyb) / (wyt - wyb);
+//	return make_tuple((vxl + (Xw - wxl) * Sx),(vyb + (Yw - wyb) * Sy) );
+//}
+double angleToRadian(double angle) {  //from angle to radian
+	return (angle * M_PI / (double)180.0);
+}
+void matrixOutput(double matrix[3][3]) {
+	for (int i = 0; i < 3; i++)
+	{
+		cout << "{" ;
+		for (int j = 0; j < 2; j++) {
+			cout << matrix[i][j] << ",";
+		}
+		cout << matrix[i][2] << "}" << endl;
+	}
+	cout << endl;
+}
 
 //int rounding(double num, int index = 0)
 //{
@@ -116,17 +155,34 @@ void modeSwitch(string command) {
 			double x = atof(words[1].c_str());
 			double y = atof(words[2].c_str());
 			cout << x << "　" << y << endl;
+			transformationMatrix[0][0] = transformationMatrix[0][0] * x;
+			transformationMatrix[1][1] = transformationMatrix[1][1] * y;
+			matrixOutput(transformationMatrix);
+
 		}
 		else if (words[0] == "rotate")
 		{
 			double degree = atof(words[1].c_str());
 			cout << degree << endl;
+			angle += degree;
+			angleTransformationMatrix[0][0] = cos(angleToRadian(angle));
+			angleTransformationMatrix[0][1] = -1.0*sin(angleToRadian(angle));
+			angleTransformationMatrix[1][0] = sin(angleToRadian(angle));
+			angleTransformationMatrix[1][1] = cos(angleToRadian(angle));
+			matrixOutput(angleTransformationMatrix);
+
+
+
+
 		}
 		else if (words[0] == "translate")
 		{
 			double x = atof(words[1].c_str());
 			double y = atof(words[2].c_str());
 			cout << x << "　" << y << endl;
+			transformationMatrix[0][2] = transformationMatrix[0][2] + x;
+			transformationMatrix[1][2] = transformationMatrix[1][2] + y;
+			matrixOutput(transformationMatrix);
 		}
 		else if (words[0] == "square")
 		{
@@ -139,6 +195,7 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "view")
 		{
+			//cliping?
 			cout << "--view--" << endl;
 			double wxl = atof(words[1].c_str());
 			double wxr = atof(words[2].c_str());
@@ -148,29 +205,53 @@ void modeSwitch(string command) {
 			double vxr = atof(words[6].c_str());
 			double vyb = atof(words[7].c_str());
 			double vyt = atof(words[8].c_str());
+
 			cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
 
+			//world to view space
+			list<point> ::iterator point;
+			for (point = pointList.begin(); point != pointList.end(); point++) {
+				int Xv, Yv,Xw=point->getX(),Yw=point->getY();
+				//tie(Vx,Vy) = windowToViewport(point->getX(), point->getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
+				double Sx = (vxr - vxl) / (wxr - wxl);
+				double Sy = (vyt - vyb) / (wyt - wyb);
+				Xv = (vxl + (Xw - wxl) * Sx);
+				Yv = (vyb + (Yw - wyb) * Sy);
+				point->setX(Xv);
+				point->setY(Yv);
+			}
 
 		}
 		else if (words[0] == "clearData")
 		{
 			cout << "--clear data--" << endl;
+			pointList.clear();
 
 		}
 		else if (words[0] == "clearScreen")
 		{
 			cout << "--clear screen--" << endl;
+			pointList.clear();
+			drawAllPoint();
+
 
 		}
 		else if (words[0] == "reset")
 		{
 			cout << "--reset--" << endl;
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 3; j++)
+				{
+					transformationMatrix[i][j] = defaultMatrix[i][j];
+				}
+			}
 
 		}
 		else if (words[0] == "end")
 		{
 			cout << "--end--" << endl;
-
+			quit();
 		}
 		else  // "NULL" or #......
 		{
@@ -552,20 +633,20 @@ void keyBoard(unsigned char key, int x, int y) {
 }
 
 int main(int argc, char** argv) {
+	string lineInFile;
+	system("pause");
 	glutInit(&argc, argv);
 	fileName = argv[1];
-	cout << "file name:" << fileName << endl;
+	cout  <<"file name:" << fileName << endl;
 
 	inputFile.open(fileName);
-	string line;
-
 	if (!inputFile.is_open()) {
 		perror("Error open");
 		exit(EXIT_FAILURE);
 	}
-	while (getline(inputFile, line)) {
-		cout << line << endl;
-		modeSwitch(line);
+	while (getline(inputFile, lineInFile)) {
+		cout << lineInFile << endl;
+		modeSwitch(lineInFile);
 	}
 	inputFile.close();
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
