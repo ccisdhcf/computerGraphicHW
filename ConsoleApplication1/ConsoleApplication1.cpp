@@ -90,7 +90,236 @@ void matrixOutput(double matrix[3][3]) {
 	}
 	cout << endl;
 }
+void matrixOutput(double matrix[3][4]) {
+	for (int i = 0; i < 3; i++)
+	{
+		cout << "{";
+		for (int j = 0; j < 3; j++) {
+			cout << matrix[i][j] << ",";
+		}
+		cout << matrix[i][3] << "}" << endl;
+	}
+	cout << endl;
+}
+void quit() {
+	exit(1);
+}
+void drawSquare(int x, int y) {
+	glPointSize(3);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glBegin(GL_POINTS);
+	glVertex2i(x, glutGet(GLUT_WINDOW_HEIGHT) - y);
+	glEnd();
 
+}
+void drawAllPoint() {
+	glClear(GL_COLOR_BUFFER_BIT);
+	list<point> ::iterator point;
+	for (point = pointList.begin(); point != pointList.end(); point++) {
+		drawSquare(point->getX(), point->getY());
+	}
+	glutSwapBuffers();
+}
+void modeSwitch(string command) {
+	char space_char = ' ';
+	vector<string> words{};
+	istringstream iss(command);
+	for (string command; iss >> command; ) {
+		words.push_back(command);
+	}
+	//stringstream sstream(command);
+	//string word;
+	//while (getline(sstream, word, space_char)) {
+	//	//word.erase(std::remove_if(word.begin(), word.end(), ispunct), word.end());
+	//	//words.push_back(word);
+	//}
+
+	if (!words.empty()) {
+
+		/*for (const auto& str : words) {
+			cout << str << " ";
+		}*/
+		cout << endl << words[0] << endl;
+		//mode select
+		if (words[0] == "scale")
+		{
+			double x = atof(words[1].c_str());
+			double y = atof(words[2].c_str());
+			cout << x << "　" << y << endl;
+			transformationMatrix[0][0] = transformationMatrix[0][0] * x;
+			transformationMatrix[1][1] = transformationMatrix[1][1] * y;
+			matrixOutput(transformationMatrix);
+
+		}
+		else if (words[0] == "rotate")
+		{
+			double degree = atof(words[1].c_str());
+			cout << degree << endl;
+			angle += degree;
+			angleTransformationMatrix[0][0] = cos(angleToRadian(angle));
+			angleTransformationMatrix[0][1] = -1.0 * sin(angleToRadian(angle));
+			angleTransformationMatrix[1][0] = sin(angleToRadian(angle));
+			angleTransformationMatrix[1][1] = cos(angleToRadian(angle));
+			matrixOutput(angleTransformationMatrix);
+
+
+
+
+		}
+		else if (words[0] == "translate")
+		{
+			double x = atof(words[1].c_str());
+			double y = atof(words[2].c_str());
+			cout << x << "　" << y << endl;
+			transformationMatrix[0][2] = transformationMatrix[0][2] + x;
+			transformationMatrix[1][2] = transformationMatrix[1][2] + y;
+			matrixOutput(transformationMatrix);
+		}
+		else if (words[0] == "square")
+		{
+			cout << "--square--" << endl;
+			double rotatedResult[3][4];
+			double result[3][4];
+			matrixOutput(angleTransformationMatrix);
+			matrixOutput(squareMatrix);
+
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 4; j++) {
+					rotatedResult[i][j] = 0;
+
+					for (int k = 0; k < 3; k++) {
+						rotatedResult[i][j] += angleTransformationMatrix[i][k] * squareMatrix[k][j];
+						//cout << "??? " << transformationMatrix[i][k] * rotatedResult[k][j] << endl;
+
+					}
+
+					cout << rotatedResult[i][j] << "\t";
+				}
+
+				cout << endl;
+			}
+			cout << endl;
+
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 4; j++) {
+					result[i][j] = 0;
+
+					for (int k = 0; k < 3; k++) {
+						result[i][j] += transformationMatrix[i][k] * rotatedResult[k][j];
+					}
+
+					cout << result[i][j] << "\t";
+				}
+
+				cout << endl;
+			}
+		}
+		else if (words[0] == "triangle")
+		{
+			double rotatedResult[3][3];
+			double result[3][3];
+			cout << "--triangle--" << endl;
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					rotatedResult[i][j] = 0;
+
+					for (int k = 0; k < 3; k++) {
+						rotatedResult[i][j] += angleTransformationMatrix[i][k] * triangleMatrix[k][j];
+					}
+
+					cout << rotatedResult[i][j] << "\t";
+				}
+
+				cout << endl;
+			}
+			cout << endl;
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					result[i][j] = 0;
+
+					for (int k = 0; k < 3; k++) {
+						result[i][j] += transformationMatrix[i][k] * rotatedResult[k][j];
+					}
+
+					cout << result[i][j] << "\t";
+				}
+
+				cout << endl;
+			}
+
+		}
+		else if (words[0] == "view")
+		{
+			//cliping?
+			cout << "--view--" << endl;
+			double wxl = atof(words[1].c_str());
+			double wxr = atof(words[2].c_str());
+			double wyb = atof(words[3].c_str());
+			double wyt = atof(words[4].c_str());
+			double vxl = atof(words[5].c_str());
+			double vxr = atof(words[6].c_str());
+			double vyb = atof(words[7].c_str());
+			double vyt = atof(words[8].c_str());
+
+			cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
+
+			//world to view space
+			list<point> ::iterator point;
+			for (point = pointList.begin(); point != pointList.end(); point++) {
+				int Xv, Yv, Xw = point->getX(), Yw = point->getY();
+				//tie(Vx,Vy) = windowToViewport(point->getX(), point->getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
+				double Sx = (vxr - vxl) / (wxr - wxl);
+				double Sy = (vyt - vyb) / (wyt - wyb);
+				Xv = (vxl + (Xw - wxl) * Sx);
+				Yv = (vyb + (Yw - wyb) * Sy);
+				point->setX(Xv);
+				point->setY(Yv);
+			}
+
+		}
+		else if (words[0] == "clearData")
+		{
+			cout << "--clear data--" << endl;
+			pointList.clear();
+
+		}
+		else if (words[0] == "clearScreen")
+		{
+			cout << "--clear screen--" << endl;
+			pointList.clear();
+			drawAllPoint();
+
+
+		}
+		else if (words[0] == "reset")
+		{
+			cout << "--reset--" << endl;
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 3; j++)
+				{
+					transformationMatrix[i][j] = defaultMatrix[i][j];
+					angleTransformationMatrix[i][j] = defaultMatrix[i][j];
+				}
+			}
+
+		}
+		else if (words[0] == "end")
+		{
+			cout << "--end--" << endl;
+			quit();
+		}
+		else  // "NULL" or #......
+		{
+			cout << "--skip--" << endl;
+
+		}
+
+	}
+
+
+	system("pause");
+}
 //int rounding(double num, int index = 0)
 //{
 //	bool isNegative = false; // whether is negative number or not
@@ -124,163 +353,25 @@ void matrixOutput(double matrix[3][3]) {
 void display() {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
+	cout << "file name:" << fileName << endl;
+	string lineInFile;
+
+	inputFile.open(fileName);
+	if (!inputFile.is_open()) {
+		perror("Error open");
+		exit(EXIT_FAILURE);
+	}
+	while (getline(inputFile, lineInFile)) {
+		cout << lineInFile << endl;
+		modeSwitch(lineInFile);
+	}
+	inputFile.close();
 	glFlush();
 }
-void quit() {
-	exit(1);
-}
-void modeSwitch(string command) {
-	char space_char = ' ';
-	vector<string> words{};
-	istringstream iss(command);
-	for (string command; iss >> command; ) {
-		words.push_back(command);
-	}
-	//stringstream sstream(command);
-	//string word;
-	//while (getline(sstream, word, space_char)) {
-	//	//word.erase(std::remove_if(word.begin(), word.end(), ispunct), word.end());
-	//	//words.push_back(word);
-	//}
-
-	if (!words.empty()) {
-
-		/*for (const auto& str : words) {
-			cout << str << " ";
-		}*/
-		cout <<endl<<words[0]<< endl;
-		//mode select
-		if (words[0]=="scale")
-		{
-			double x = atof(words[1].c_str());
-			double y = atof(words[2].c_str());
-			cout << x << "　" << y << endl;
-			transformationMatrix[0][0] = transformationMatrix[0][0] * x;
-			transformationMatrix[1][1] = transformationMatrix[1][1] * y;
-			matrixOutput(transformationMatrix);
-
-		}
-		else if (words[0] == "rotate")
-		{
-			double degree = atof(words[1].c_str());
-			cout << degree << endl;
-			angle += degree;
-			angleTransformationMatrix[0][0] = cos(angleToRadian(angle));
-			angleTransformationMatrix[0][1] = -1.0*sin(angleToRadian(angle));
-			angleTransformationMatrix[1][0] = sin(angleToRadian(angle));
-			angleTransformationMatrix[1][1] = cos(angleToRadian(angle));
-			matrixOutput(angleTransformationMatrix);
 
 
 
 
-		}
-		else if (words[0] == "translate")
-		{
-			double x = atof(words[1].c_str());
-			double y = atof(words[2].c_str());
-			cout << x << "　" << y << endl;
-			transformationMatrix[0][2] = transformationMatrix[0][2] + x;
-			transformationMatrix[1][2] = transformationMatrix[1][2] + y;
-			matrixOutput(transformationMatrix);
-		}
-		else if (words[0] == "square")
-		{
-			cout << "--square--" << endl;
-		}
-		else if (words[0] == "triangle")
-		{
-			cout << "--triangle--" << endl;
-
-		}
-		else if (words[0] == "view")
-		{
-			//cliping?
-			cout << "--view--" << endl;
-			double wxl = atof(words[1].c_str());
-			double wxr = atof(words[2].c_str());
-			double wyb = atof(words[3].c_str());
-			double wyt = atof(words[4].c_str());
-			double vxl = atof(words[5].c_str());
-			double vxr = atof(words[6].c_str());
-			double vyb = atof(words[7].c_str());
-			double vyt = atof(words[8].c_str());
-
-			cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
-
-			//world to view space
-			list<point> ::iterator point;
-			for (point = pointList.begin(); point != pointList.end(); point++) {
-				int Xv, Yv,Xw=point->getX(),Yw=point->getY();
-				//tie(Vx,Vy) = windowToViewport(point->getX(), point->getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
-				double Sx = (vxr - vxl) / (wxr - wxl);
-				double Sy = (vyt - vyb) / (wyt - wyb);
-				Xv = (vxl + (Xw - wxl) * Sx);
-				Yv = (vyb + (Yw - wyb) * Sy);
-				point->setX(Xv);
-				point->setY(Yv);
-			}
-
-		}
-		else if (words[0] == "clearData")
-		{
-			cout << "--clear data--" << endl;
-			pointList.clear();
-
-		}
-		else if (words[0] == "clearScreen")
-		{
-			cout << "--clear screen--" << endl;
-			pointList.clear();
-			drawAllPoint();
-
-
-		}
-		else if (words[0] == "reset")
-		{
-			cout << "--reset--" << endl;
-			for (int i = 0; i < 3; i++)
-			{
-				for (int j = 0; j < 3; j++)
-				{
-					transformationMatrix[i][j] = defaultMatrix[i][j];
-				}
-			}
-
-		}
-		else if (words[0] == "end")
-		{
-			cout << "--end--" << endl;
-			quit();
-		}
-		else  // "NULL" or #......
-		{
-			cout << "--skip--" << endl;
-
-		}
-		
-	}
-	
-
-	system("pause");
-}
-
-void drawSquare(int x, int y) {
-	glPointSize(3);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glBegin(GL_POINTS);
-	glVertex2i(x, glutGet(GLUT_WINDOW_HEIGHT) - y);
-	glEnd();
-
-}
-void drawAllPoint() {
-	glClear(GL_COLOR_BUFFER_BIT);
-	list<point> ::iterator point;
-	for (point = pointList.begin(); point != pointList.end(); point++) {
-		drawSquare(point->getX(), point->getY());
-	}
-	glutSwapBuffers();
-}
 
 void recover() {
 	list<point> ::iterator pointIterator;
@@ -633,22 +724,10 @@ void keyBoard(unsigned char key, int x, int y) {
 }
 
 int main(int argc, char** argv) {
-	string lineInFile;
 	system("pause");
 	glutInit(&argc, argv);
 	fileName = argv[1];
-	cout  <<"file name:" << fileName << endl;
-
-	inputFile.open(fileName);
-	if (!inputFile.is_open()) {
-		perror("Error open");
-		exit(EXIT_FAILURE);
-	}
-	while (getline(inputFile, lineInFile)) {
-		cout << lineInFile << endl;
-		modeSwitch(lineInFile);
-	}
-	inputFile.close();
+	
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(100, 100);
