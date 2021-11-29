@@ -14,6 +14,7 @@
 #include <cmath>
 #include<math.h>
 #include <tuple>
+#include <iomanip>
 
 using namespace std;
 class point
@@ -84,9 +85,9 @@ void matrixOutput(double matrix[3][3]) {
 	{
 		cout << "{" ;
 		for (int j = 0; j < 2; j++) {
-			cout << matrix[i][j] << ",";
+			cout << setw(10) << matrix[i][j] << ",";
 		}
-		cout << matrix[i][2] << "}" << endl;
+		cout << setw(10) << matrix[i][2] << "}" << endl;
 	}
 	cout << endl;
 }
@@ -95,9 +96,9 @@ void matrixOutput(double matrix[3][4]) {
 	{
 		cout << "{";
 		for (int j = 0; j < 3; j++) {
-			cout << matrix[i][j] << ",";
+			cout << setw(10) << matrix[i][j] << ",";
 		}
-		cout << matrix[i][3] << "}" << endl;
+		cout << setw(10) << matrix[i][3] << "}" << endl;
 	}
 	cout << endl;
 }
@@ -149,7 +150,6 @@ void modeSwitch(string command) {
 			transformationMatrix[0][0] = transformationMatrix[0][0] * x;
 			transformationMatrix[1][1] = transformationMatrix[1][1] * y;
 			matrixOutput(transformationMatrix);
-
 		}
 		else if (words[0] == "rotate")
 		{
@@ -161,10 +161,6 @@ void modeSwitch(string command) {
 			angleTransformationMatrix[1][0] = sin(angleToRadian(angle));
 			angleTransformationMatrix[1][1] = cos(angleToRadian(angle));
 			matrixOutput(angleTransformationMatrix);
-
-
-
-
 		}
 		else if (words[0] == "translate")
 		{
@@ -180,46 +176,80 @@ void modeSwitch(string command) {
 			cout << "--square--" << endl;
 			double rotatedResult[3][4];
 			double result[3][4];
+			double rotateTMMulTM[3][3];
 			matrixOutput(angleTransformationMatrix);
 			matrixOutput(squareMatrix);
+			for (int i = 0; i < 3; i++) {
+				cout << "{";
+
+				for (int j = 0; j < 3; j++) {
+					rotateTMMulTM[i][j] = 0;
+					for (int k = 0; k < 3; k++) {
+						rotateTMMulTM[i][j] += transformationMatrix[i][k] * angleTransformationMatrix[k][j];
+					}
+
+					cout << setw(10)<< rotateTMMulTM[i][j] << "";
+				}
+				cout << "}" << endl;
+			}
+			cout << endl;
 
 			for (int i = 0; i < 3; i++) {
+				cout << "{";
+
 				for (int j = 0; j < 4; j++) {
 					rotatedResult[i][j] = 0;
-
 					for (int k = 0; k < 3; k++) {
 						rotatedResult[i][j] += angleTransformationMatrix[i][k] * squareMatrix[k][j];
 						//cout << "??? " << transformationMatrix[i][k] * rotatedResult[k][j] << endl;
 
 					}
 
-					cout << rotatedResult[i][j] << "\t";
+					cout << setw(10) << rotatedResult[i][j] << "";
 				}
-
-				cout << endl;
+				cout<<"}" << endl;
 			}
 			cout << endl;
 
 			for (int i = 0; i < 3; i++) {
+				cout << "{";
+
 				for (int j = 0; j < 4; j++) {
+
 					result[i][j] = 0;
 
 					for (int k = 0; k < 3; k++) {
 						result[i][j] += transformationMatrix[i][k] * rotatedResult[k][j];
 					}
 
-					cout << result[i][j] << "\t";
+					cout << setw(10) << result[i][j] << "";
 				}
-
-				cout << endl;
+				cout << "}" << endl;
 			}
 		}
 		else if (words[0] == "triangle")
 		{
 			double rotatedResult[3][3];
 			double result[3][3];
+			double rotateTMMulTM[3][3];
 			cout << "--triangle--" << endl;
 			for (int i = 0; i < 3; i++) {
+				cout << "{";
+
+				for (int j = 0; j < 3; j++) {
+					rotateTMMulTM[i][j] = 0;
+					for (int k = 0; k < 3; k++) {
+						rotateTMMulTM[i][j] += transformationMatrix[i][k] * angleTransformationMatrix[k][j];
+					}
+
+					cout << setw(10) << rotateTMMulTM[i][j] << "";
+				}
+				cout << "}" << endl;
+			}
+			cout << endl;
+			for (int i = 0; i < 3; i++) {
+				cout << "{";
+
 				for (int j = 0; j < 3; j++) {
 					rotatedResult[i][j] = 0;
 
@@ -227,13 +257,15 @@ void modeSwitch(string command) {
 						rotatedResult[i][j] += angleTransformationMatrix[i][k] * triangleMatrix[k][j];
 					}
 
-					cout << rotatedResult[i][j] << "\t";
+					cout << setw(10) << rotatedResult[i][j] << "\t";
 				}
 
-				cout << endl;
+				cout << "}" << endl;
 			}
 			cout << endl;
 			for (int i = 0; i < 3; i++) {
+				cout << "{";
+
 				for (int j = 0; j < 3; j++) {
 					result[i][j] = 0;
 
@@ -241,10 +273,10 @@ void modeSwitch(string command) {
 						result[i][j] += transformationMatrix[i][k] * rotatedResult[k][j];
 					}
 
-					cout << result[i][j] << "\t";
+					cout << setw(10) << result[i][j] << "\t";
 				}
 
-				cout << endl;
+				cout << "}" << endl;
 			}
 
 		}
