@@ -47,7 +47,8 @@ private:
 	double x;
 	double y;
 public:
-	pointInDouble(double _x, double _y) {
+	pointInDouble
+	(double _x, double _y) {
 		x = _x;
 		y = _y;
 	};
@@ -66,7 +67,7 @@ public:
 
 };
 ifstream inputFile;
-vector<pair<point,point>> windowSidePair;
+vector<pair<pointInDouble, pointInDouble>> windowSidePair;
 vector<pair<point, point>> viewSidePair;
 list<point> pointList;
 list<point> pointListBackUp;
@@ -395,7 +396,7 @@ void drawLine(point src, point des) {
 
 }
 void saveToSideList(double result[3][4]) {
-	point p0(result[0][0], result[1][0]),
+	pointInDouble p0(result[0][0], result[1][0]),
 		p1(result[0][1], result[1][1]),
 		p2(result[0][2], result[1][2]),
 		p3(result[0][3], result[1][3]);
@@ -409,7 +410,7 @@ void saveToSideList(double result[3][4]) {
 	windowSidePair.push_back(make_pair(p3, p0));
 }
 void saveToSideList(double result[3][3]) {
-	point p0(result[0][0], result[1][0]),
+	pointInDouble p0(result[0][0], result[1][0]),
 		p1(result[0][1], result[1][1]),
 		p2(result[0][2], result[1][2]);
 		
@@ -427,8 +428,9 @@ void drawBorder(double vxl, double vxr, double vyb, double vyt) {
 	drawLine(b, d);
 	drawLine(c, d);
 }
-pair<int,int> windowToViewport(double _Xw,double _Yw,double wxl,double wxr,double wyb,double wyt,double vxl,double vxr,double vyb,double vyt) {
-	int Xv, Yv, Xw = _Xw, Yw = _Yw;
+pair<double,double> windowToViewport(double _Xw,double _Yw,double wxl,double wxr,double wyb,double wyt,double vxl,double vxr,double vyb,double vyt) {
+	
+	double Xv, Yv, Xw = _Xw, Yw = _Yw;
 	double Sx = (vxr - vxl) / (wxr - wxl);
 	double Sy = (vyt - vyb) / (wyt - wyb);
 	Xv = (vxl + (Xw - wxl) * Sx);
@@ -546,14 +548,11 @@ void modeSwitch(string command) {
 
 				for (int j = 0; j < 3; j++) {
 					rotatedResult[i][j] = 0;
-
 					for (int k = 0; k < 3; k++) {
 						rotatedResult[i][j] += angleTransformationMatrix[i][k] * triangleMatrix[k][j];
 					}
-
 					//cout << setw(10) << rotatedResult[i][j] << "\t";
 				}
-
 				//cout << "}" << endl;
 			}
 			cout << endl;
@@ -562,17 +561,14 @@ void modeSwitch(string command) {
 
 				for (int j = 0; j < 3; j++) {
 					result[i][j] = 0;
-
 					for (int k = 0; k < 3; k++) {
 						result[i][j] += transformationMatrix[i][k] * rotatedResult[k][j];
 					}
-
 					//cout << setw(10) << result[i][j] << "\t";
 				}
-
 				//cout << "}" << endl;
 			}
-			matrixOutput(result);
+			//matrixOutput(result);
 			saveToSideList(result);
 
 		}
@@ -595,7 +591,7 @@ void modeSwitch(string command) {
 			int firstVx = 0, firstVy = 0, secondVx = 0, secondVy = 0;
 			for (int i=0; i<windowSidePair.size(); i++) {
 			
-				//cout << "----side pair NO." << i << endl <<setw(6)<<"first" << setw(4) << windowSidePair[i].first.getX() << setw(4) << windowSidePair[i].first.getY() << endl<<setw(6)<<"second" << setw(4) << windowSidePair[i].second.getX() << setw(4) << windowSidePair[i].second.getY() << endl;
+				cout << "----side pair NO." << i << endl <<setw(6)<<"first" << setw(4) << windowSidePair[i].first.getX() << setw(4) << windowSidePair[i].first.getY() << endl<<setw(6)<<"second" << setw(4) << windowSidePair[i].second.getX() << setw(4) << windowSidePair[i].second.getY() << endl;
 
 				//world to view space
 				tie(firstVx,firstVy) = windowToViewport(windowSidePair[i].first.getX(), windowSidePair[i].first.getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
@@ -603,7 +599,7 @@ void modeSwitch(string command) {
 				tie(secondVx, secondVy) = windowToViewport(windowSidePair[i].second.getX(), windowSidePair[i].second.getY(), wxl, wxr, wyb, wyt, vxl, vxr, vyb, vyt);
 				point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
 
-				//cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << firstVx << setw(4) << firstVy<< endl << setw(6) << "second" << setw(4) << secondVx << setw(4) << secondVy << endl;
+				cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << firstVx << setw(4) << firstVy<< endl << setw(6) << "second" << setw(4) << secondVx << setw(4) << secondVy << endl;
 				drawLine(viewP0, viewP1);
 			}
 			drawBorder(vxl, vxr, vyb, vyt);
