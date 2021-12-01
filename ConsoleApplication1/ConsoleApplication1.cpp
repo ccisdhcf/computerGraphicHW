@@ -21,8 +21,8 @@ using namespace std;
 class point
 {
 	private:
-		int x;
-		int y;
+		int x=0;
+		int y=0;
 	public:
 		point(int _x, int _y) {
 			x = _x;
@@ -71,15 +71,15 @@ ifstream inputFile;
 vector<pair<pointInDouble, pointInDouble>> windowSidePair;
 vector<pair<point, point>> viewSidePair;
 list<point> pointList;
-list<point> clippingPointList;
+//list<point> clippingPointList;
 list<point> pointListBackUp;
 point lineTemp = point(NULL, NULL);
-point circleTemp = point(NULL, NULL);
-point polygonSrc = point(NULL, NULL);
-point polygontemp = point(NULL, NULL);
-int circleCounter = 0;
+//point circleTemp = point(NULL, NULL);
+//point polygonSrc = point(NULL, NULL);
+//point polygontemp = point(NULL, NULL);
+//int circleCounter = 0;
 int lineCounter = 0;
-int mode = 0; //  d,l,p,o,c,r,q
+//int mode = 0; //  d,l,p,o,c,r,q
 string fileName = "";
 
 static double defaultMatrix[3][3] = { 1.0, 0.0, 0.0,
@@ -94,6 +94,30 @@ static double squareMatrix[3][4] = { -1.0,-1.0, 1.0, 1.0,
 static double triangleMatrix[3][3] = { 0.0,-1.0, 1.0,
 									   1.0,-1.0,-1.0,
 									   1.0, 1.0, 1.0};
+//clipping use
+typedef int OutCode;
+const int INSIDE = 0; // 0000
+const int LEFT = 1;   // 0001
+const int RIGHT = 2;  // 0010
+const int BOTTOM = 4; // 0100
+const int TOP = 8;    // 1000
+OutCode computeOutCode(double x, double y, double vxl, double vxr, double vyb, double vyt)
+{
+	OutCode code;
+
+	code = INSIDE;          // initialised as being inside of [[clip window]]
+
+	if (x < vxl)           // to the left of clip window
+		code |= LEFT;
+	else if (x > vxr)      // to the right of clip window
+		code |= RIGHT;
+	if (y < vyb)           // below the clip window
+		code |= BOTTOM;
+	else if (y > vyt)      // above the clip window
+		code |= TOP;
+
+	return code;
+}
 
 double angleToRadian(double angle) {  //from angle to radian
 	return (angle * M_PI / (double)180.0);
@@ -196,20 +220,20 @@ void drawSquare(int x, int y) {
 }
 void drawAllPoint() {
 	glClear(GL_COLOR_BUFFER_BIT);
-	list<point> ::iterator point;
-	for (point = pointList.begin(); point != pointList.end(); point++) {
-		drawSquare(point->getX(), (windowH-point->getY()));
+	list<point> ::iterator p;
+	for (p = pointList.begin(); p != pointList.end(); p++) {
+		drawSquare(p->getX(), (windowH-(p->getY())));
 	}
 	glutSwapBuffers();
 }
-void drawClippingPoint() {
-	glClear(GL_COLOR_BUFFER_BIT);
-	list<point> ::iterator point;
-	for (point = clippingPointList.begin(); point != clippingPointList.end(); point++) {
-		drawSquare(point->getX(), (windowH - point->getY()));
-	}
-	glutSwapBuffers();
-}
+//void drawClippingPoint() {
+//	glClear(GL_COLOR_BUFFER_BIT);
+//	list<point> ::iterator p;
+//	for (p = clippingPointList.begin(); p != clippingPointList.end(); p++) {
+//		drawSquare(p->getX(), (windowH - (p->getY())));
+//	}
+//	glutSwapBuffers();
+//}
 
 //void circle1to8(point centre, point p_0) {
 //	point p_1 = point(p_0.getY(), p_0.getX());
@@ -470,29 +494,98 @@ pair<double,double> windowToViewport(double _Xw,double _Yw,double wxl,double wxr
 	Yv = (vyb + (Yw - wyb) * Sy);
 	return make_pair(Xv, Yv);
 }
-void clipping(double vxl, double vxr, double vyb, double vyt) {
-	list<point> ::iterator p;
-	for (p= pointList.begin(); p != pointList.end(); p++) {
-		point newP(p->getX(), p->getY());
-		if (p->getX() < vxl)
-		{
-			newP.setX(vxl);
+pair<point, point> clipping(double vx0,double vy0,double vx1,double vy1,double vxl, double vxr, double vyb, double vyt){
+
+
+	OutCode code0 = computeOutCode(vx0, vy0,  vxl,  vxr,  vyb,  vyt);
+	OutCode	code1 = computeOutCode(vx1, vy1,  vxl,  vxr,  vyb,  vyt);
+
+
+
+	while (true) {
+		if (!(code0 | code1)) {
+			// bitwise OR is 0: both points inside window; trivially accept and exit loop
+			return make_pair(point(vx0, vy0), point(vx1, vy1));
+			break;
 		}
-		if (p->getX() > vxr)
-		{
-			newP.setX(vxr);
+		else if (code0 & code1) {
+			// bitwise AND is not 0: both points share an outside zone (LEFT, RIGHT, TOP,
+			// or BOTTOM), so both must be outside window; exit loop (accept is false)
+			return make_pair(point(NULL,NULL), point(NULL, NULL));
+			break;
 		}
-		if (p->getY() < vyb)
-		{
-			newP.setY(vyb);
+		else {
+			// failed both tests, so calculate the line segment to clip
+			// from an outside point to an intersection with clip edge
+			double x, y;
+
+			// At least one endpoint is outside the clip rectangle; pick it.
+			OutCode outcodeOut = code1 > code0 ? code1 : code0;
+
+			// Now find the intersection point;
+			// use formulas:
+			//   slope = (y1 - y0) / (x1 - x0)
+			//   x = x0 + (1 / slope) * (ym - y0), where ym is ymin or ymax
+			//   y = y0 + slope * (xm - x0), where xm is xmin or xmax
+			// No need to worry about divide-by-zero because, in each case, the
+			// outcode bit being tested guarantees the denominator is non-zero
+			if (outcodeOut & TOP) {           // point is above the clip window
+				x = vx0 + (vx1 - vx0) * (vyt - vy0) / (vy1 - vy0);
+				y = vyt;
+			}
+			else if (outcodeOut & BOTTOM) { // point is below the clip window
+				x = vx0 + (vx1 - vx0) * (vyb - vy0) / (vy1 - vy0);
+				y = vyb;
+			}
+			else if (outcodeOut & RIGHT) {  // point is to the right of clip window
+				y = vy0 + (vy1 - vy0) * (vxr - vx0) / (vx1 - vx0);
+				x = vxr;
+			}
+			else if (outcodeOut & LEFT) {   // point is to the left of clip window
+				y = vy0 + (vy1 - vy0) * (vxl - vx0) / (vx1 - vx0);
+				x = vxl;
+			}
+
+			// Now we move outside point to intersection point to clip
+			// and get ready for next pass.
+			if (outcodeOut == code0) {
+				vx0 = x;
+				vy0 = y;
+				code0 = computeOutCode(vx0, vy0, vxl, vxr, vyb, vyt);
+			}
+			else {
+				vx1 = x;
+				vy1 = y;
+				code1 = computeOutCode(vx1, vy1, vxl, vxr, vyb, vyt);
+			}
 		}
-		if (p->getY() > vyt)
-		{
-			newP.setY(vyt);
-		}
-		clippingPointList.push_back(newP);
 	}
+
+
 }
+//void fakeClipping(double vxl, double vxr, double vyb, double vyt) {
+//	list<point> ::iterator p;
+//	for (p= pointList.begin(); p != pointList.end(); p++) {
+//		point newP(p->getX(), p->getY());
+//		if (p->getX() < vxl)
+//		{
+//			newP.setX(vxl);
+//		}
+//		if (p->getX() > vxr)
+//		{
+//			newP.setX(vxr);
+//		}
+//		if (p->getY() < vyb)
+//		{
+//			newP.setY(vyb);
+//		}
+//		if (p->getY() > vyt)
+//		{
+//			newP.setY(vyt);
+//		}
+//		clippingPointList.push_back(newP);
+//	}
+//}
 void modeSwitch(string command) {
 	char space_char = ' ';
 	vector<string> words{};
@@ -591,7 +684,7 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "view")
 		{
-			//cliping?
+			
 			cout << "--view--" << endl;
 			double wxl = atof(words[1].c_str());
 			double wxr = atof(words[2].c_str());
@@ -604,18 +697,24 @@ void modeSwitch(string command) {
 			cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
 			//world to view space
 			int firstVx = 0, firstVy = 0, secondVx = 0, secondVy = 0;
+			point clippingP0(0,0), clippingP1(0,0);
 			for (int i=0; i<windowSidePair.size(); i++) {
 				//cout << "----side pair NO." << i << endl <<setw(6)<<"first" << setw(4) << windowSidePair[i].first.getX() << setw(4) << windowSidePair[i].first.getY() << endl<<setw(6)<<"second" << setw(4) << windowSidePair[i].second.getX() << setw(4) << windowSidePair[i].second.getY() << endl;
 				//world to view space
 				tie(firstVx,firstVy) = windowToViewport(windowSidePair[i].first.getX(), windowSidePair[i].first.getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
 				tie(secondVx, secondVy) = windowToViewport(windowSidePair[i].second.getX(), windowSidePair[i].second.getY(), wxl, wxr, wyb, wyt, vxl, vxr, vyb, vyt);
-				point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
-				//cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << firstVx << setw(4) << firstVy<< endl << setw(6) << "second" << setw(4) << secondVx << setw(4) << secondVy << endl;
-				drawLine(viewP0, viewP1);
+
+				//clipping
+				tie(clippingP0,clippingP1)=clipping(firstVx, firstVy, secondVx, secondVy,vxl, vxr, vyb, vyt);
+				//point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
+				cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << clippingP0.getX() << setw(4) << clippingP0 .getY()<< endl << setw(6) << "second" << setw(4) << clippingP1.getX() << setw(4) << clippingP1.getY() << endl;
+				
+				drawLine(clippingP0, clippingP1);
 			}
 			drawBorder(vxl, vxr, vyb, vyt);
-			clipping(vxl, vxr, vyb, vyt);
-			drawClippingPoint();
+			//fakeClipping(vxl, vxr, vyb, vyt);  //just a joke, you knowwwwwww
+			//drawClippingPoint();
+			drawAllPoint();
 			system("pause");
 		}
 		else if (words[0] == "clearData")
@@ -628,8 +727,8 @@ void modeSwitch(string command) {
 		{
 			cout << "--clear screen--" << endl;
 			pointList.clear();
-			clippingPointList.clear();
-			drawClippingPoint();
+			/*clippingPointList.clear();
+			drawClippingPoint();*/
 		}
 		else if (words[0] == "reset")
 		{
