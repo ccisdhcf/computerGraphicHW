@@ -79,6 +79,8 @@ point lineTemp = point(NULL, NULL);
 //point polygontemp = point(NULL, NULL);
 //int circleCounter = 0;
 int lineCounter = 0;
+int squareCounter = 0;
+int triangleCounter = 0;
 //int mode = 0; //  d,l,p,o,c,r,q
 string fileName = "";
 
@@ -131,7 +133,7 @@ void matrixOutput(double matrix[3][3]) {
 		}
 		cout << setw(10) << matrix[i][2] << "}" << endl;
 	}
-	cout << endl;
+	//cout << endl;
 }
 void matrixOutput(double matrix[3][4]) {
 	for (int i = 0; i < 3; i++)
@@ -142,7 +144,7 @@ void matrixOutput(double matrix[3][4]) {
 		}
 		cout << setw(10) << matrix[i][3] << "}" << endl;
 	}
-	cout << endl;
+	//cout << endl;
 }
 void calRotateTMMulTM(double angleTransformationMatrix[3][3]) {
 	double temp[3][3];
@@ -150,8 +152,6 @@ void calRotateTMMulTM(double angleTransformationMatrix[3][3]) {
 
 	pair<double, double> translateTemp = { transformationMatrix[0][2], transformationMatrix[1][2] };
 
-	cout << transformationMatrix[0][2];
-	cout << transformationMatrix[1][2];
 
 	double Tnegative[3][3] = { 1.0, 0.0, -1* translateTemp.first,
 							   0.0, 1.0, -1* translateTemp.second,
@@ -159,8 +159,8 @@ void calRotateTMMulTM(double angleTransformationMatrix[3][3]) {
 	double T[3][3] = { 1.0, 0.0, translateTemp.first,
 					   0.0, 1.0, translateTemp.second,
 					   0.0, 0.0, 1.0 };
-	matrixOutput(Tnegative);
-	matrixOutput(T);
+	//matrixOutput(Tnegative);
+	//matrixOutput(T);
 	//  self - rotate
 	//for (int i = 0; i < 3; i++) {
 	//	for (int j = 0; j < 3; j++) {
@@ -199,12 +199,10 @@ void calRotateTMMulTM(double angleTransformationMatrix[3][3]) {
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
 			transformationMatrix[i][j] = 0;
-			
 			transformationMatrix[i][j] = temp2[i][j];
-			
 		}
 	}
-	matrixOutput(transformationMatrix);
+	//matrixOutput(transformationMatrix);
 
 
 }
@@ -492,6 +490,7 @@ pair<double,double> windowToViewport(double _Xw,double _Yw,double wxl,double wxr
 	double Sy = (vyt - vyb) / (wyt - wyb);
 	Xv = (vxl + (Xw - wxl) * Sx);
 	Yv = (vyb + (Yw - wyb) * Sy);
+	
 	return make_pair(Xv, Yv);
 }
 pair<point, point> clipping(double vx0,double vy0,double vx1,double vy1,double vxl, double vxr, double vyb, double vyt){
@@ -605,13 +604,14 @@ void modeSwitch(string command) {
 		/*for (const auto& str : words) {
 			cout << str << " ";
 		}*/
-		cout << endl << words[0] << endl;
+		//cout << words[0] << endl;
 		//mode select
 		if (words[0] == "scale")
 		{
+			cout << "Scale" << endl;
 			double x = atof(words[1].c_str());
 			double y = atof(words[2].c_str());
-			cout << x << "　" << y << endl;
+			//cout << x << "　" << y << endl;
 			transformationMatrix[0][0] = transformationMatrix[0][0] * x;
 			transformationMatrix[1][1] = transformationMatrix[1][1] * y;
 			matrixOutput(transformationMatrix);
@@ -619,11 +619,12 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "rotate")
 		{
+			cout << "Rotate" << endl;
 			double angleTransformationMatrix[3][3] = { 1.0, 0.0, 0.0,
 												       0.0, 1.0, 0.0,
 												       0.0, 0.0, 1.0 };
 			double degree = atof(words[1].c_str());
-			cout << degree << endl;
+			//cout << degree << endl;
 
 			angleTransformationMatrix[0][0] = cos(angleToRadian(degree));
 			angleTransformationMatrix[0][1] = -1.0 * sin(angleToRadian(degree));
@@ -636,9 +637,10 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "translate")
 		{
+			cout << "Translate" << endl;
 			double x = atof(words[1].c_str());
 			double y = atof(words[2].c_str());
-			cout << x << "　" << y << endl;
+			//cout << x << "　" << y << endl;
 			transformationMatrix[0][2] = transformationMatrix[0][2] + x;
 			transformationMatrix[1][2] = transformationMatrix[1][2] + y;
 			matrixOutput(transformationMatrix);
@@ -646,28 +648,28 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "square")
 		{
-			cout << "--square--" << endl;
+			//cout << "--square--" << endl;
 			double result[3][4];
-			cout << endl;
-
 			for (int i = 0; i < 3; i++) {
-				cout << "{";
+				//cout << "{";
 				for (int j = 0; j < 4; j++) {
 					result[i][j] = 0;
 					for (int k = 0; k < 3; k++) {
 						result[i][j] += transformationMatrix[i][k] * squareMatrix[k][j];
 					}
-					cout << setw(10) << result[i][j] << "";
+					//cout << setw(10) << result[i][j] << "";
 				}
-				cout << "}" << endl;
+				//cout << "}" << endl;
 			}
 			saveToSideList(result);
+			squareCounter += 1;
+			cout << "You have" << setw(2) << squareCounter << " squares." << endl;
 		}
 		else if (words[0] == "triangle")
 		{
 			double result[3][3];
-			cout << "--triangle--" << endl;
-			cout << endl;
+			//cout << "Triangle" << endl;
+			//cout << endl;
 			for (int i = 0; i < 3; i++) {
 				//cout << "{";
 				for (int j = 0; j < 3; j++) {
@@ -681,11 +683,13 @@ void modeSwitch(string command) {
 			}
 			//matrixOutput(result);
 			saveToSideList(result);
+			triangleCounter += 1;
+			cout << "You have" << setw(2) << triangleCounter << " triangles." << endl;
 		}
 		else if (words[0] == "view")
 		{
 			
-			cout << "--view--" << endl;
+			cout << "view" << endl<<"WVM"<<endl;
 			double wxl = atof(words[1].c_str());
 			double wxr = atof(words[2].c_str());
 			double wyb = atof(words[3].c_str());
@@ -694,7 +698,7 @@ void modeSwitch(string command) {
 			double vxr = atof(words[6].c_str());
 			double vyb = atof(words[7].c_str());
 			double vyt = atof(words[8].c_str());
-			cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
+			//cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
 			//world to view space
 			int firstVx = 0, firstVy = 0, secondVx = 0, secondVy = 0;
 			point clippingP0(0,0), clippingP1(0,0);
@@ -707,7 +711,7 @@ void modeSwitch(string command) {
 				//clipping
 				tie(clippingP0,clippingP1)=clipping(firstVx, firstVy, secondVx, secondVy,vxl, vxr, vyb, vyt);
 				//point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
-				cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << clippingP0.getX() << setw(4) << clippingP0 .getY()<< endl << setw(6) << "second" << setw(4) << clippingP1.getX() << setw(4) << clippingP1.getY() << endl;
+				//cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << clippingP0.getX() << setw(4) << clippingP0 .getY()<< endl << setw(6) << "second" << setw(4) << clippingP1.getX() << setw(4) << clippingP1.getY() << endl;
 				
 				drawLine(clippingP0, clippingP1);
 			}
@@ -715,24 +719,55 @@ void modeSwitch(string command) {
 			//fakeClipping(vxl, vxr, vyb, vyt);  //just a joke, you knowwwwwww
 			//drawClippingPoint();
 			drawAllPoint();
+			//cal wvm
+			double TnegativeW[3][3] = { 1.0, 0.0, -wxl,
+							   0.0, 1.0, -wyb,
+							   0.0, 0.0, 1.0 };
+			double Tv[3][3] = { 1.0, 0.0, vxl,
+									   0.0, 1.0, vyb,
+									   0.0, 0.0, 1.0 };
+			double S[3][3] = { (vxr - vxl) / (wxr - wxl), 0.0, 0.0,
+							   0.0, (vyt - vyb) / (wyt - wyb), 0.0,
+							   0.0, 0.0, 1.0 };
+			double temp[3][3];
+			double wvm[3][3];
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					temp[i][j] = 0;
+					for (int k = 0; k < 3; k++) {
+						temp[i][j] += S[i][k] * TnegativeW[k][j];
+					}
+				}
+			}
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					wvm[i][j] = 0;
+					for (int k = 0; k < 3; k++) {
+						wvm[i][j] += Tv[i][k] * temp[k][j];
+					}
+				}
+			}
+			matrixOutput(wvm);
 			system("pause");
 		}
 		else if (words[0] == "clearData")
 		{
-			cout << "--clear data--" << endl;
+			//cout << "--clear data--" << endl;
 			pointList.clear();
 			windowSidePair.clear();
+			squareCounter = 0;
 		}
 		else if (words[0] == "clearScreen")
 		{
-			cout << "--clear screen--" << endl;
+			//cout << "--clear screen--" << endl;
 			pointList.clear();
+			drawAllPoint();
 			/*clippingPointList.clear();
 			drawClippingPoint();*/
 		}
 		else if (words[0] == "reset")
 		{
-			cout << "--reset--" << endl;
+			//cout << "--reset--" << endl;
 			for (int i = 0; i < 3; i++)
 			{
 				for (int j = 0; j < 3; j++)
@@ -743,13 +778,20 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "end")
 		{
-			cout << "--end--" << endl;
+			//cout << "--end--" << endl;
 
 			quit();
 		}
+		else if (words[0] == "#") {
+			for (int j = 0; j < words.size(); j++)
+			{
+				cout<<words[j]<<" ";
+			}
+			cout << endl;
+		}
 		else  // "NULL" or #......
 		{
-			cout << "--skip--" << endl;
+			//cout << "--skip--" << endl;
 		}
 	}
 }
@@ -786,7 +828,7 @@ void modeSwitch(string command) {
 void display() {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
-	cout << "file name:" << fileName << endl;
+	//cout << "file name:" << fileName << endl;
 	string lineInFile;
 
 	inputFile.open(fileName);
@@ -795,7 +837,7 @@ void display() {
 		exit(EXIT_FAILURE);
 	}
 	while (getline(inputFile, lineInFile)) {
-		cout << lineInFile << endl;
+		//cout << lineInFile << endl;
 		modeSwitch(lineInFile);
 	}
 	inputFile.close();
