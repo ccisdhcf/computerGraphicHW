@@ -15,8 +15,7 @@
 #include<math.h>
 #include <tuple>
 #include <iomanip>
-#define windowH 1000
-#define windowW 1000
+
 using namespace std;
 class point
 {
@@ -59,14 +58,87 @@ public:
 	double getY() {
 		return y;
 	}
+	void setX(double new_x) {
+		x = new_x;
+	}
+	void setY(double new_y) {
+		y = new_y;
+	}
+
+};
+class point3D {
+private:
+	int x = 0;
+	int y = 0;
+	int z = 0;
+public:
+	point3D(int _x, int _y,int _z) {
+		x = _x;
+		y = _y;
+		z = _z;
+	};
+	int getX() {
+		return x;
+	};
+	int getY() {
+		return y;
+	}
+	int getZ() {
+		return z;
+	}
 	void setX(int new_x) {
 		x = new_x;
 	}
 	void setY(int new_y) {
 		y = new_y;
 	}
+	void setZ(int new_z) {
+		z = new_z;
+	}
+};
+class point3DInDouble
+{
+private:
+	double x;
+	double y;
+	double z;
+public:
+	point3DInDouble(double _x, double _y,double _z) {
+		x = _x;
+		y = _y;
+		z = _z;
+	};
+	double getX() {
+		return x;
+	};
+	double getY() {
+		return y;
+	}
+	double getZ() {
+		return z;
+	}
+	void setX(double new_x) {
+		x = new_x;
+	}
+	void setY(double new_y) {
+		y = new_y;
+	}
+	void setZ(double new_z) {
+		z = new_z;
+	}
 
 };
+double vectorLength(point3DInDouble p0) {
+
+	return sqrt(p0.getX() * p0.getX() + p0.getY() * p0.getY() + p0.getZ() * p0.getZ());
+}
+point3DInDouble cross(point3DInDouble p0, point3DInDouble p1) {
+	double x, y, z;
+	x = p0.getY() * p1.getZ() - p0.getZ() * p1.getY();
+	y = p0.getZ() * p1.getX() - p0.getX() * p1.getZ();
+	z = p0.getX() * p1.getY() - p0.getY() * p1.getX();
+	return point3DInDouble(x, y, z);
+}
 ifstream inputFile;
 vector<pair<pointInDouble, pointInDouble>> windowSidePair;
 vector<pair<point, point>> viewSidePair;
@@ -83,19 +155,52 @@ int squareCounter = 0;
 int triangleCounter = 0;
 //int mode = 0; //  d,l,p,o,c,r,q
 string fileName = "";
-
-static double defaultMatrix[3][3] = { 1.0, 0.0, 0.0,
-								      0.0, 1.0, 0.0,
-									  0.0, 0.0, 1.0 };
-static double transformationMatrix[3][3] = { 1.0, 0.0, 0.0,
-						  				     0.0, 1.0, 0.0,
-									         0.0, 0.0, 1.0 };
-static double squareMatrix[3][4] = { -1.0,-1.0, 1.0, 1.0,
-									   -1.0, 1.0, 1.0,-1.0,
-										1.0, 1.0 ,1.0, 1.0 };
-static double triangleMatrix[3][3] = { 0.0,-1.0, 1.0,
-									   1.0,-1.0,-1.0,
-									   1.0, 1.0, 1.0};
+int windowH = 1000;
+int windowW = 1000;
+//static double defaultMatrix[3][3] = { 1.0, 0.0, 0.0,
+//									  0.0, 1.0, 0.0,
+//									  0.0, 0.0, 1.0, };
+//static double transformationMatrix[3][3] = { 1.0, 0.0, 0.0,
+//									         0.0, 1.0, 0.0,
+//									         0.0, 0.0, 1.0, };
+static double defaultMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
+								      0.0, 1.0, 0.0, 0.0,
+									  0.0, 0.0, 1.0, 0.0,
+									  0.0, 0.0, 0.0, 1.0};
+static double defaultMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
+									  0.0, 1.0, 0.0, 0.0,
+									  0.0, 0.0, 1.0, 0.0,
+									  0.0, 0.0, 0.0, 1.0 };
+static double mulResultTemp[4][4] = { 1.0, 0.0, 0.0, 0.0,
+									  0.0, 1.0, 0.0, 0.0,
+									  0.0, 0.0, 1.0, 0.0,
+									  0.0, 0.0, 0.0, 1.0 };
+static double transformationMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
+											 0.0, 1.0, 0.0, 0.0,
+											 0.0, 0.0, 1.0 ,0.0,
+											 0.0, 0.0, 0.0, 1.0 };
+static double tempMatrix0[4][4] = { 1.0, 0.0, 0.0, 0.0,
+											 0.0, 1.0, 0.0, 0.0,
+											 0.0, 0.0, 1.0 ,0.0,
+											 0.0, 0.0, 0.0, 1.0 };
+static double tempMatrix1[4][4] = { 1.0, 0.0, 0.0, 0.0,
+											 0.0, 1.0, 0.0, 0.0,
+											 0.0, 0.0, 1.0 ,0.0,
+											 0.0, 0.0, 0.0, 1.0 };
+static double PM[4][4] = { 1.0, 0.0, 0.0, 0.0,
+							 0.0, 1.0, 0.0, 0.0,
+							 0.0, 0.0, 1.0 ,0.0,
+							 0.0, 0.0, 0.0, 1.0 };
+static double EM[4][4] = { 1.0, 0.0, 0.0, 0.0,
+							 0.0, 1.0, 0.0, 0.0,
+							 0.0, 0.0, 1.0 ,0.0,
+							 0.0, 0.0, 0.0, 1.0 };
+//static double squareMatrix[3][4] = { -1.0,-1.0, 1.0, 1.0,
+//									   -1.0, 1.0, 1.0,-1.0,
+//										1.0, 1.0 ,1.0, 1.0 };
+//static double triangleMatrix[3][3] = { 0.0,-1.0, 1.0,
+//									   1.0,-1.0,-1.0,
+//									   1.0, 1.0, 1.0};
 //clipping use
 typedef int OutCode;
 const int INSIDE = 0; // 0000
@@ -124,6 +229,17 @@ OutCode computeOutCode(double x, double y, double vxl, double vxr, double vyb, d
 double angleToRadian(double angle) {  //from angle to radian
 	return (angle * M_PI / (double)180.0);
 }
+void matrixOutput(double matrix[4][4]) {
+	for (int i = 0; i < 4; i++)
+	{
+		cout << "{";
+		for (int j = 0; j < 3; j++) {
+			cout << setw(10) << matrix[i][j] << ",";
+		}
+		cout << setw(10) << matrix[i][3] << "}" << endl;
+	}
+	//cout << endl;
+}
 void matrixOutput(double matrix[3][3]) {
 	for (int i = 0; i < 3; i++)
 	{
@@ -146,66 +262,101 @@ void matrixOutput(double matrix[3][4]) {
 	}
 	//cout << endl;
 }
-void calRotateTMMulTM(double angleTransformationMatrix[3][3]) {
-	double temp[3][3];
-	double temp2[3][3];
-
-	pair<double, double> translateTemp = { transformationMatrix[0][2], transformationMatrix[1][2] };
-
-
-	double Tnegative[3][3] = { 1.0, 0.0, -1* translateTemp.first,
-							   0.0, 1.0, -1* translateTemp.second,
-						       0.0, 0.0, 1.0 };
-	double T[3][3] = { 1.0, 0.0, translateTemp.first,
-					   0.0, 1.0, translateTemp.second,
-					   0.0, 0.0, 1.0 };
-	//matrixOutput(Tnegative);
-	//matrixOutput(T);
-	//  self - rotate
-	//for (int i = 0; i < 3; i++) {
-	//	for (int j = 0; j < 3; j++) {
-	//		temp[i][j] = 0;
-	//		for (int k = 0; k < 3; k++) {
-	//			temp[i][j] += Tnegative[i][k] * transformationMatrix[k][j];
-	//		}
-	//	}
-	//}
-	//matrixOutput(temp);
-	//for (int i = 0; i < 3; i++) {
-	//	for (int j = 0; j < 3; j++) {
-	//		temp2[i][j] = 0;
-	//		for (int k = 0; k < 3; k++) {
-	//			temp2[i][j] += angleTransformationMatrix[i][k] * temp[k][j];
-	//		}
-	//	}
-	//}
-	//matrixOutput(temp2);
-	//for (int i = 0; i < 3; i++) {
-	//	for (int j = 0; j < 3; j++) {
-	//		transformationMatrix[i][j] = 0;
-	//		for (int k = 0; k < 3; k++) {
-	//			transformationMatrix[i][j] += T[i][k] * temp2[k][j];
-	//		}
-	//	}
-	//}
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			temp2[i][j] = 0;
-			for (int k = 0; k < 3; k++) {
-				temp2[i][j] += angleTransformationMatrix[i][k] * transformationMatrix[k][j];
-			}
-		}
-	}	
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			transformationMatrix[i][j] = 0;
-			transformationMatrix[i][j] = temp2[i][j];
+void resetToIdentityMatrix(double M[4][4]) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			M[i][j] = defaultMatrix3D[i][j];
 		}
 	}
-	//matrixOutput(transformationMatrix);
-
-
 }
+void copyMatrix(double src[4][4], double des[4][4],bool resetSrc=false) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			des[i][j] = src[i][j];
+		}
+	}
+	if (resetSrc)
+	{
+		resetToIdentityMatrix(src);
+	}
+}
+void calMMulM(double M[4][4], double M2[4][4],double MResult[4][4]) {
+	static double mulResultTemp[4][4];
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			mulResultTemp[i][j] = 0;
+			for (int k = 0; k < 4; k++) {
+				mulResultTemp[i][j] += M[i][k] * M2[k][j];
+			}
+		}
+	}
+	copyMatrix(mulResultTemp, MResult);
+}
+void calPM(double pmH, double pmY, double pmTheta) {
+	//!!!!! PM[1][1] wait for viewport command
+	PM[2][2] = pmY * tan(angleToRadian(pmTheta)) / (pmY - pmH);
+	PM[3][2] = tan(angleToRadian(pmTheta));
+	PM[2][3] = pmH * pmY * tan(angleToRadian(pmTheta)) / (pmH - pmY);
+	PM[3][3] = 0.0;
+}
+//void calRotateTMMulTM(double angleTransformationMatrix[4][4]) {
+//	double temp[4][4];
+//	double temp2[4][4];
+//
+//	//pair<double, double> translateTemp = { transformationMatrix[0][2], transformationMatrix[1][2] };
+//	/*double Tnegative[3][3] = { 1.0, 0.0, -1* translateTemp.first,
+//							   0.0, 1.0, -1* translateTemp.second,
+//						       0.0, 0.0, 1.0 };
+//	double T[3][3] = { 1.0, 0.0, translateTemp.first,
+//					   0.0, 1.0, translateTemp.second,
+//					   0.0, 0.0, 1.0 };*/
+//	//matrixOutput(Tnegative);
+//	//matrixOutput(T);
+//	//  self - rotate
+//	//for (int i = 0; i < 3; i++) {
+//	//	for (int j = 0; j < 3; j++) {
+//	//		temp[i][j] = 0;
+//	//		for (int k = 0; k < 3; k++) {
+//	//			temp[i][j] += Tnegative[i][k] * transformationMatrix[k][j];
+//	//		}
+//	//	}
+//	//}
+//	//matrixOutput(temp);
+//	//for (int i = 0; i < 3; i++) {
+//	//	for (int j = 0; j < 3; j++) {
+//	//		temp2[i][j] = 0;
+//	//		for (int k = 0; k < 3; k++) {
+//	//			temp2[i][j] += angleTransformationMatrix[i][k] * temp[k][j];
+//	//		}
+//	//	}
+//	//}
+//	//matrixOutput(temp2);
+//	//for (int i = 0; i < 3; i++) {
+//	//	for (int j = 0; j < 3; j++) {
+//	//		transformationMatrix[i][j] = 0;
+//	//		for (int k = 0; k < 3; k++) {
+//	//			transformationMatrix[i][j] += T[i][k] * temp2[k][j];
+//	//		}
+//	//	}
+//	//}
+//	for (int i = 0; i < 4; i++) {
+//		for (int j = 0; j < 4; j++) {
+//			temp2[i][j] = 0;
+//			for (int k = 0; k < 4; k++) {
+//				temp2[i][j] += angleTransformationMatrix[i][k] * transformationMatrix[k][j];
+//			}
+//		}
+//	}	
+//	for (int i = 0; i < 4; i++) {
+//		for (int j = 0; j < 4; j++) {
+//			transformationMatrix[i][j] = 0;
+//			transformationMatrix[i][j] = temp2[i][j];
+//		}
+//	}
+//	//matrixOutput(transformationMatrix);
+//
+//
+//}
 void quit() {
 	exit(1);
 }
@@ -516,7 +667,7 @@ pair<point, point> clipping(double vx0,double vy0,double vx1,double vy1,double v
 		else {
 			// failed both tests, so calculate the line segment to clip
 			// from an outside point to an intersection with clip edge
-			double x, y;
+			double x=0.0, y=0.0;
 
 			// At least one endpoint is outside the clip rectangle; pick it.
 			OutCode outcodeOut = code1 > code0 ? code1 : code0;
@@ -611,28 +762,53 @@ void modeSwitch(string command) {
 			cout << "Scale" << endl;
 			double x = atof(words[1].c_str());
 			double y = atof(words[2].c_str());
+			//3D
+			double z = atof(words[3].c_str());
 			//cout << x << "　" << y << endl;
-			transformationMatrix[0][0] = transformationMatrix[0][0] * x;
-			transformationMatrix[1][1] = transformationMatrix[1][1] * y;
-			matrixOutput(transformationMatrix);
+			//transformationMatrix[0][0] = transformationMatrix[0][0] * x;
+			//transformationMatrix[1][1] = transformationMatrix[1][1] * y;
+			transformationMatrix3D[0][0] = transformationMatrix3D[0][0] * x;
+			transformationMatrix3D[1][1] = transformationMatrix3D[1][1] * y;
+			transformationMatrix3D[2][2] = transformationMatrix3D[2][2] * z;
+
+			matrixOutput(transformationMatrix3D);
 			
 		}
 		else if (words[0] == "rotate")
 		{
 			cout << "Rotate" << endl;
-			double angleTransformationMatrix[3][3] = { 1.0, 0.0, 0.0,
-												       0.0, 1.0, 0.0,
-												       0.0, 0.0, 1.0 };
-			double degree = atof(words[1].c_str());
-			//cout << degree << endl;
+			double angleTransformationMatrix[4][4] = { 1.0, 0.0, 0.0, 0.0,
+												       0.0, 1.0, 0.0, 0.0,
+												       0.0, 0.0, 1.0, 0.0,
+													   0.0, 0.0, 0.0, 1.0 };
+			//double degree = atof(words[1].c_str());
+			double degreeX = atof(words[1].c_str());
+			double degreeY = atof(words[2].c_str());
+			double degreeZ = atof(words[3].c_str());
+			double cosX = cos(angleToRadian(degreeX));
+			double sinX = sin(angleToRadian(degreeX));
+			double cosY = cos(angleToRadian(degreeY));
+			double sinY = sin(angleToRadian(degreeY));
+			double cosZ = cos(angleToRadian(degreeZ));
+			double sinZ = sin(angleToRadian(degreeZ));
 
-			angleTransformationMatrix[0][0] = cos(angleToRadian(degree));
-			angleTransformationMatrix[0][1] = -1.0 * sin(angleToRadian(degree));
+			//cout << degree << endl;
+			/*angleTransformationMatrix[0][0] = cos(angleToRadian(degree));
+			angleTransformationMatrix[0][1] =-1.0*sin(angleToRadian(degree)) ;
 			angleTransformationMatrix[1][0] = sin(angleToRadian(degree));
-			angleTransformationMatrix[1][1] = cos(angleToRadian(degree));
-		
-			calRotateTMMulTM(angleTransformationMatrix);
-			matrixOutput(transformationMatrix);
+			angleTransformationMatrix[1][1] = cos(angleToRadian(degree));*/
+			angleTransformationMatrix[0][0] = cosZ*cosY;
+			angleTransformationMatrix[0][1] = -1.0*sinZ*cosX+cosZ*sinY*sinX;
+			angleTransformationMatrix[0][2] = sinZ * sinX + cosZ * sinY * cosX;
+			angleTransformationMatrix[1][0] = sinZ * cosY;
+			angleTransformationMatrix[1][1] = cosZ * cosX + sinZ * sinY * sinX;
+			angleTransformationMatrix[1][2] = -1.0 * cosZ * sinX + sinZ * sinY * cosX;
+			angleTransformationMatrix[2][0] = -1.0 * sinY;
+			angleTransformationMatrix[2][1] = cosY * sinX;
+			angleTransformationMatrix[2][2] = cosY * cosX;
+			calMMulM(angleTransformationMatrix, transformationMatrix3D, transformationMatrix3D);
+			//calRotateTMMulTM(angleTransformationMatrix);
+			matrixOutput(transformationMatrix3D);
 
 		}
 		else if (words[0] == "translate")
@@ -640,116 +816,196 @@ void modeSwitch(string command) {
 			cout << "Translate" << endl;
 			double x = atof(words[1].c_str());
 			double y = atof(words[2].c_str());
+			//3D
+			double z = atof(words[3].c_str());
 			//cout << x << "　" << y << endl;
-			transformationMatrix[0][2] = transformationMatrix[0][2] + x;
-			transformationMatrix[1][2] = transformationMatrix[1][2] + y;
-			matrixOutput(transformationMatrix);
+			//transformationMatrix[0][2] = transformationMatrix[0][2] + x;
+			//transformationMatrix[1][2] = transformationMatrix[1][2] + y;
+			transformationMatrix3D[0][3] = transformationMatrix3D[0][3] + x;
+			transformationMatrix3D[1][3] = transformationMatrix3D[1][3] + y;
+			transformationMatrix3D[2][3] = transformationMatrix3D[2][3] + z;
+			matrixOutput(transformationMatrix3D);
 			
 		}
-		else if (words[0] == "square")
-		{
-			//cout << "--square--" << endl;
-			double result[3][4];
-			for (int i = 0; i < 3; i++) {
-				//cout << "{";
-				for (int j = 0; j < 4; j++) {
-					result[i][j] = 0;
-					for (int k = 0; k < 3; k++) {
-						result[i][j] += transformationMatrix[i][k] * squareMatrix[k][j];
-					}
-					//cout << setw(10) << result[i][j] << "";
-				}
-				//cout << "}" << endl;
-			}
-			saveToSideList(result);
-			squareCounter += 1;
-			cout << "You have" << setw(2) << squareCounter << " squares." << endl;
-		}
-		else if (words[0] == "triangle")
-		{
-			double result[3][3];
-			//cout << "Triangle" << endl;
-			//cout << endl;
-			for (int i = 0; i < 3; i++) {
-				//cout << "{";
-				for (int j = 0; j < 3; j++) {
-					result[i][j] = 0;
-					for (int k = 0; k < 3; k++) {
-						result[i][j] += transformationMatrix[i][k] * triangleMatrix[k][j];
-					}
-					//cout << setw(10) << result[i][j] << "\t";
-				}
-				//cout << "}" << endl;
-			}
-			//matrixOutput(result);
-			saveToSideList(result);
-			triangleCounter += 1;
-			cout << "You have" << setw(2) << triangleCounter << " triangles." << endl;
-		}
-		else if (words[0] == "view")
-		{
-			
-			cout << "view" << endl<<"WVM"<<endl;
-			double wxl = atof(words[1].c_str());
-			double wxr = atof(words[2].c_str());
-			double wyb = atof(words[3].c_str());
-			double wyt = atof(words[4].c_str());
-			double vxl = atof(words[5].c_str());
-			double vxr = atof(words[6].c_str());
-			double vyb = atof(words[7].c_str());
-			double vyt = atof(words[8].c_str());
-			//cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
-			//world to view space
-			int firstVx = 0, firstVy = 0, secondVx = 0, secondVy = 0;
-			point clippingP0(0,0), clippingP1(0,0);
-			for (int i=0; i<windowSidePair.size(); i++) {
-				//cout << "----side pair NO." << i << endl <<setw(6)<<"first" << setw(4) << windowSidePair[i].first.getX() << setw(4) << windowSidePair[i].first.getY() << endl<<setw(6)<<"second" << setw(4) << windowSidePair[i].second.getX() << setw(4) << windowSidePair[i].second.getY() << endl;
-				//world to view space
-				tie(firstVx,firstVy) = windowToViewport(windowSidePair[i].first.getX(), windowSidePair[i].first.getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
-				tie(secondVx, secondVy) = windowToViewport(windowSidePair[i].second.getX(), windowSidePair[i].second.getY(), wxl, wxr, wyb, wyt, vxl, vxr, vyb, vyt);
+		else if (words[0] == "observer") {
+			double eX = atof(words[1].c_str());
+			double eY = atof(words[2].c_str());
+			double eZ = atof(words[3].c_str());
+			double colX = atof(words[4].c_str());
+			double colY = atof(words[5].c_str());
+			double colZ = atof(words[6].c_str());
+			double tilt = atof(words[7].c_str());
+			double pmH= atof(words[8].c_str());
+			double pmY = atof(words[9].c_str());
+			double pmTheta = atof(words[10].c_str());
+			static double negativeEyeMatrix[4][4] = { 1.0, 0.0, 0.0, -1.0 * eX,
+													  0.0, 1.0, 0.0, -1.0 * eY,
+													  0.0, 0.0, 1.0, -1.0 * eZ,
+												      0.0, 0.0, 0.0, 1.0};
+			static double GRM[4][4] = { 1.0, 0.0, 0.0, 0.0,
+						   			    0.0, 1.0, 0.0, 0.0,
+										0.0, 0.0, 1.0, 0.0,
+										0.0, 0.0, 0.0, 1.0 };
+			static double mirrorMatrix[4][4] = { -1.0, 0.0, 0.0, 0.0,
+										0.0, 1.0, 0.0, 0.0,
+										0.0, 0.0, 1.0, 0.0,
+										0.0, 0.0, 0.0, 1.0 };
+			static double tiltMatrix[4][4] = { 1.0, 0.0, 0.0, 0.0,
+										0.0, 1.0, 0.0, 0.0,
+										0.0, 0.0, 1.0, 0.0,
+										0.0, 0.0, 0.0, 1.0 };
+			point3DInDouble v1(0.0, 0.0, 0.0), v2(0.0, 0.0, 0.0), v3(0.0, 0.0, 0.0), viewVector(0.0, 0.0, 0.0), topVector(0.0, 1.0, 0.0);
+			viewVector.setX(colX - eX);
+			viewVector.setY(colY - eY);
+			viewVector.setZ(colZ - eZ);
+			v3.setX(viewVector.getX());
+			v3.setY(viewVector.getY());
+			v3.setZ(viewVector.getZ());
+			v1 = cross(topVector, viewVector);
+			v2 = cross(v3, v1);
+			double lenV3 = vectorLength(v3);
+			double lenV2 = vectorLength(v2);
+			double lenV1 = vectorLength(v1);
+			GRM[0][0] = v1.getX() / lenV1;
+			GRM[0][1] = v1.getY() / lenV1;
+			GRM[0][2] = v1.getZ() / lenV1;
+			GRM[1][0] = v2.getX() / lenV2;
+			GRM[1][1] = v2.getY() / lenV2;
+			GRM[1][2] = v2.getZ() / lenV2;
+			GRM[2][0] = v3.getX() / lenV3;
+			GRM[2][1] = v3.getY() / lenV3;
+			GRM[2][2] = v3.getZ() / lenV3;
+			cout << "GRM:" << endl;
+			matrixOutput(GRM);
+			cout << "mirror:" << endl;
+			matrixOutput(mirrorMatrix);
+			tiltMatrix[0][0] = cos(angleToRadian(tilt));
+			tiltMatrix[0][1] = sin(angleToRadian(tilt)) ;
+			tiltMatrix[1][0] = -1.0 * sin(angleToRadian(tilt));
+			tiltMatrix[1][1] = cos(angleToRadian(tilt));
+			cout << "tile:" << endl;
+			matrixOutput(tiltMatrix);
+			calMMulM(tiltMatrix, mirrorMatrix, tempMatrix0);
+			calMMulM(tempMatrix0, GRM, tempMatrix0);
+			calMMulM(tempMatrix0, negativeEyeMatrix, EM);
 
-				//clipping
-				tie(clippingP0,clippingP1)=clipping(firstVx, firstVy, secondVx, secondVy,vxl, vxr, vyb, vyt);
-				//point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
-				//cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << clippingP0.getX() << setw(4) << clippingP0 .getY()<< endl << setw(6) << "second" << setw(4) << clippingP1.getX() << setw(4) << clippingP1.getY() << endl;
-				
-				drawLine(clippingP0, clippingP1);
-			}
-			drawBorder(vxl, vxr, vyb, vyt);
-			//fakeClipping(vxl, vxr, vyb, vyt);  //just a joke, you knowwwwwww
-			//drawClippingPoint();
-			drawAllPoint();
-			//cal wvm
-			double TnegativeW[3][3] = { 1.0, 0.0, -wxl,
-							   0.0, 1.0, -wyb,
-							   0.0, 0.0, 1.0 };
-			double Tv[3][3] = { 1.0, 0.0, vxl,
-									   0.0, 1.0, vyb,
-									   0.0, 0.0, 1.0 };
-			double S[3][3] = { (vxr - vxl) / (wxr - wxl), 0.0, 0.0,
-							   0.0, (vyt - vyb) / (wyt - wyb), 0.0,
-							   0.0, 0.0, 1.0 };
-			double temp[3][3];
-			double wvm[3][3];
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					temp[i][j] = 0;
-					for (int k = 0; k < 3; k++) {
-						temp[i][j] += S[i][k] * TnegativeW[k][j];
-					}
-				}
-			}
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					wvm[i][j] = 0;
-					for (int k = 0; k < 3; k++) {
-						wvm[i][j] += Tv[i][k] * temp[k][j];
-					}
-				}
-			}
-			matrixOutput(wvm);
-			system("pause");
+			calPM(pmH, pmY, pmTheta);
 		}
+		else if (words[0] == "viewport")
+		{
+		double vxl = atof(words[1].c_str());
+		double vxr = atof(words[2].c_str());
+		double vyb = atof(words[3].c_str());
+		double vyt = atof(words[4].c_str());
+		//aspect ratio for pm
+		PM[1][1] = (vxr - vxl) / (vyt - vyb);
+
+		}
+		//else if (words[0] == "square")
+		//{
+		//	//cout << "--square--" << endl;
+		//	double result[3][4];
+		//	for (int i = 0; i < 3; i++) {
+		//		//cout << "{";
+		//		for (int j = 0; j < 4; j++) {
+		//			result[i][j] = 0;
+		//			for (int k = 0; k < 3; k++) {
+		//				result[i][j] += transformationMatrix[i][k] * squareMatrix[k][j];
+		//			}
+		//			//cout << setw(10) << result[i][j] << "";
+		//		}
+		//		//cout << "}" << endl;
+		//	}
+		//	saveToSideList(result);
+		//	squareCounter += 1;
+		//	cout << "You have" << setw(2) << squareCounter << " squares." << endl;
+		//}
+		//else if (words[0] == "triangle")
+		//{
+		//	double result[3][3];
+		//	//cout << "Triangle" << endl;
+		//	//cout << endl;
+		//	for (int i = 0; i < 3; i++) {
+		//		//cout << "{";
+		//		for (int j = 0; j < 3; j++) {
+		//			result[i][j] = 0;
+		//			for (int k = 0; k < 3; k++) {
+		//				result[i][j] += transformationMatrix[i][k] * triangleMatrix[k][j];
+		//			}
+		//			//cout << setw(10) << result[i][j] << "\t";
+		//		}
+		//		//cout << "}" << endl;
+		//	}
+		//	//matrixOutput(result);
+		//	saveToSideList(result);
+		//	triangleCounter += 1;
+		//	cout << "You have" << setw(2) << triangleCounter << " triangles." << endl;
+		//}
+		
+		//else if (words[0] == "view")
+		//{
+		//	
+		//	cout << "view" << endl<<"WVM"<<endl;
+		//	double wxl = atof(words[1].c_str());
+		//	double wxr = atof(words[2].c_str());
+		//	double wyb = atof(words[3].c_str());
+		//	double wyt = atof(words[4].c_str());
+		//	double vxl = atof(words[5].c_str());
+		//	double vxr = atof(words[6].c_str());
+		//	double vyb = atof(words[7].c_str());
+		//	double vyt = atof(words[8].c_str());
+		//	//cout << wxl << " " << wxr << " " << wyb << " " << wyt << " " << vxl << " " << vxr << " " << vyb << " " << vyt << endl;
+		//	//world to view space
+		//	int firstVx = 0, firstVy = 0, secondVx = 0, secondVy = 0;
+		//	point clippingP0(0,0), clippingP1(0,0);
+		//	for (int i=0; i<windowSidePair.size(); i++) {
+		//		//cout << "----side pair NO." << i << endl <<setw(6)<<"first" << setw(4) << windowSidePair[i].first.getX() << setw(4) << windowSidePair[i].first.getY() << endl<<setw(6)<<"second" << setw(4) << windowSidePair[i].second.getX() << setw(4) << windowSidePair[i].second.getY() << endl;
+		//		//world to view space
+		//		tie(firstVx,firstVy) = windowToViewport(windowSidePair[i].first.getX(), windowSidePair[i].first.getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
+		//		tie(secondVx, secondVy) = windowToViewport(windowSidePair[i].second.getX(), windowSidePair[i].second.getY(), wxl, wxr, wyb, wyt, vxl, vxr, vyb, vyt);
+
+		//		//clipping
+		//		tie(clippingP0,clippingP1)=clipping(firstVx, firstVy, secondVx, secondVy,vxl, vxr, vyb, vyt);
+		//		//point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
+		//		//cout << "--after WtoV"<< endl << setw(6) << "first" << setw(4) << clippingP0.getX() << setw(4) << clippingP0 .getY()<< endl << setw(6) << "second" << setw(4) << clippingP1.getX() << setw(4) << clippingP1.getY() << endl;
+		//		
+		//		drawLine(clippingP0, clippingP1);
+		//	}
+		//	drawBorder(vxl, vxr, vyb, vyt);
+		//	//fakeClipping(vxl, vxr, vyb, vyt);  //just a joke, you knowwwwwww
+		//	//drawClippingPoint();
+		//	drawAllPoint();
+		//	//cal wvm
+		//	double TnegativeW[3][3] = { 1.0, 0.0, -wxl,
+		//					   0.0, 1.0, -wyb,
+		//					   0.0, 0.0, 1.0 };
+		//	double Tv[3][3] = { 1.0, 0.0, vxl,
+		//							   0.0, 1.0, vyb,
+		//							   0.0, 0.0, 1.0 };
+		//	double S[3][3] = { (vxr - vxl) / (wxr - wxl), 0.0, 0.0,
+		//					   0.0, (vyt - vyb) / (wyt - wyb), 0.0,
+		//					   0.0, 0.0, 1.0 };
+		//	double temp[3][3];
+		//	double wvm[3][3];
+		//	for (int i = 0; i < 3; i++) {
+		//		for (int j = 0; j < 3; j++) {
+		//			temp[i][j] = 0;
+		//			for (int k = 0; k < 3; k++) {
+		//				temp[i][j] += S[i][k] * TnegativeW[k][j];
+		//			}
+		//		}
+		//	}
+		//	for (int i = 0; i < 3; i++) {
+		//		for (int j = 0; j < 3; j++) {
+		//			wvm[i][j] = 0;
+		//			for (int k = 0; k < 3; k++) {
+		//				wvm[i][j] += Tv[i][k] * temp[k][j];
+		//			}
+		//		}
+		//	}
+		//	matrixOutput(wvm);
+		//	system("pause");
+		//}
 		else if (words[0] == "clearData")
 		{
 			//cout << "--clear data--" << endl;
@@ -772,7 +1028,7 @@ void modeSwitch(string command) {
 			{
 				for (int j = 0; j < 3; j++)
 				{
-					transformationMatrix[i][j] = defaultMatrix[i][j];
+					transformationMatrix3D[i][j] = defaultMatrix3D[i][j];
 				}
 			}
 		}
