@@ -17,29 +17,30 @@
 #include <iomanip>
 
 using namespace std;
+
 class point
 {
-	private:
-		int x=0;
-		int y=0;
-	public:
-		point(int _x, int _y) {
-			x = _x;
-			y = _y;
-		};
-		int getX() {
-			return x;
-		};
-		int getY() {
-			return y;
-		}
-		void setX(int new_x) {
-			x = new_x;
-		}
-		void setY(int new_y) {
-			y = new_y;
-		}
-		
+private:
+	int x = 0;
+	int y = 0;
+public:
+	point(int _x, int _y) {
+		x = _x;
+		y = _y;
+	};
+	int getX() {
+		return x;
+	};
+	int getY() {
+		return y;
+	}
+	void setX(int new_x) {
+		x = new_x;
+	}
+	void setY(int new_y) {
+		y = new_y;
+	}
+
 };
 class pointInDouble
 {
@@ -72,7 +73,7 @@ private:
 	int y = 0;
 	int z = 0;
 public:
-	point3D(int _x, int _y,int _z) {
+	point3D(int _x, int _y, int _z) {
 		x = _x;
 		y = _y;
 		z = _z;
@@ -102,11 +103,14 @@ private:
 	double x;
 	double y;
 	double z;
+	double w;
+	
 public:
-	point3DInDouble(double _x, double _y,double _z) {
+	point3DInDouble(double _x, double _y, double _z, double _w = 1.0) {
 		x = _x;
 		y = _y;
 		z = _z;
+		w = _w;
 	};
 	double getX() {
 		return x;
@@ -117,6 +121,9 @@ public:
 	double getZ() {
 		return z;
 	}
+	double getW() {
+		return w;
+	}
 	void setX(double new_x) {
 		x = new_x;
 	}
@@ -126,7 +133,29 @@ public:
 	void setZ(double new_z) {
 		z = new_z;
 	}
-
+	void setW(double new_w) {
+		w = new_w;
+	}
+};
+class poly {
+public:
+	int n;//n-sides
+	vector<int>pointNO;  //before clipping
+	vector<point3DInDouble> pointInPoly;  //after clipping use
+	poly() {
+		n = 0;
+		pointNO.clear();
+		pointInPoly.clear();
+	};
+};
+class objectBase {
+public:
+	vector<point3DInDouble> pList;
+	vector<poly> plane;
+	objectBase() {
+		pList.clear();
+		plane.clear();
+	}
 };
 double vectorLength(point3DInDouble p0) {
 
@@ -140,11 +169,14 @@ point3DInDouble cross(point3DInDouble p0, point3DInDouble p1) {
 	return point3DInDouble(x, y, z);
 }
 ifstream inputFile;
-vector<pair<pointInDouble, pointInDouble>> windowSidePair;
-vector<pair<point, point>> viewSidePair;
+ifstream objectFile;
+//vector<pair<pointInDouble, pointInDouble>> windowSidePair;
+//vector<pair<point, point>> viewSidePair;
 list<point> pointList;
+//list<point3DInDouble> pointList3D;
 //list<point> clippingPointList;
 list<point> pointListBackUp;
+vector<objectBase> objs;
 point lineTemp = point(NULL, NULL);
 //point circleTemp = point(NULL, NULL);
 //point polygonSrc = point(NULL, NULL);
@@ -155,8 +187,8 @@ int squareCounter = 0;
 int triangleCounter = 0;
 //int mode = 0; //  d,l,p,o,c,r,q
 string fileName = "";
-int windowH = 1000;
-int windowW = 1000;
+int windowH = 0;
+int windowW = 0;
 //static double defaultMatrix[3][3] = { 1.0, 0.0, 0.0,
 //									  0.0, 1.0, 0.0,
 //									  0.0, 0.0, 1.0, };
@@ -164,13 +196,10 @@ int windowW = 1000;
 //									         0.0, 1.0, 0.0,
 //									         0.0, 0.0, 1.0, };
 static double defaultMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
-								      0.0, 1.0, 0.0, 0.0,
-									  0.0, 0.0, 1.0, 0.0,
-									  0.0, 0.0, 0.0, 1.0};
-static double defaultMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
 									  0.0, 1.0, 0.0, 0.0,
 									  0.0, 0.0, 1.0, 0.0,
 									  0.0, 0.0, 0.0, 1.0 };
+
 static double mulResultTemp[4][4] = { 1.0, 0.0, 0.0, 0.0,
 									  0.0, 1.0, 0.0, 0.0,
 									  0.0, 0.0, 1.0, 0.0,
@@ -201,30 +230,32 @@ static double EM[4][4] = { 1.0, 0.0, 0.0, 0.0,
 //static double triangleMatrix[3][3] = { 0.0,-1.0, 1.0,
 //									   1.0,-1.0,-1.0,
 //									   1.0, 1.0, 1.0};
-//clipping use
-typedef int OutCode;
-const int INSIDE = 0; // 0000
-const int LEFT = 1;   // 0001
-const int RIGHT = 2;  // 0010
-const int BOTTOM = 4; // 0100
-const int TOP = 8;    // 1000
-OutCode computeOutCode(double x, double y, double vxl, double vxr, double vyb, double vyt)
-{
-	OutCode code;
+// 
 
-	code = INSIDE;          // initialised as being inside of [[clip window]]
-
-	if (x < vxl)           // to the left of clip window
-		code |= LEFT;
-	else if (x > vxr)      // to the right of clip window
-		code |= RIGHT;
-	if (y < vyb)           // below the clip window
-		code |= BOTTOM;
-	else if (y > vyt)      // above the clip window
-		code |= TOP;
-
-	return code;
-}
+////clipping use
+//typedef int OutCode;
+//const int INSIDE = 0; // 0000
+//const int LEFT = 1;   // 0001
+//const int RIGHT = 2;  // 0010
+//const int BOTTOM = 4; // 0100
+//const int TOP = 8;    // 1000
+//OutCode computeOutCode(double x, double y, double vxl, double vxr, double vyb, double vyt)
+//{
+//	OutCode code;
+//
+//	code = INSIDE;          // initialised as being inside of [[clip window]]
+//
+//	if (x < vxl)           // to the left of clip window
+//		code |= LEFT;
+//	else if (x > vxr)      // to the right of clip window
+//		code |= RIGHT;
+//	if (y < vyb)           // below the clip window
+//		code |= BOTTOM;
+//	else if (y > vyt)      // above the clip window
+//		code |= TOP;
+//
+//	return code;
+//}
 
 double angleToRadian(double angle) {  //from angle to radian
 	return (angle * M_PI / (double)180.0);
@@ -243,7 +274,7 @@ void matrixOutput(double matrix[4][4]) {
 void matrixOutput(double matrix[3][3]) {
 	for (int i = 0; i < 3; i++)
 	{
-		cout << "{" ;
+		cout << "{";
 		for (int j = 0; j < 2; j++) {
 			cout << setw(10) << matrix[i][j] << ",";
 		}
@@ -251,17 +282,17 @@ void matrixOutput(double matrix[3][3]) {
 	}
 	//cout << endl;
 }
-void matrixOutput(double matrix[3][4]) {
-	for (int i = 0; i < 3; i++)
-	{
-		cout << "{";
-		for (int j = 0; j < 3; j++) {
-			cout << setw(10) << matrix[i][j] << ",";
-		}
-		cout << setw(10) << matrix[i][3] << "}" << endl;
-	}
-	//cout << endl;
-}
+//void matrixOutput(double matrix[3][4]) {
+//	for (int i = 0; i < 3; i++)
+//	{
+//		cout << "{";
+//		for (int j = 0; j < 3; j++) {
+//			cout << setw(10) << matrix[i][j] << ",";
+//		}
+//		cout << setw(10) << matrix[i][3] << "}" << endl;
+//	}
+//	//cout << endl;
+//}
 void resetToIdentityMatrix(double M[4][4]) {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -269,7 +300,7 @@ void resetToIdentityMatrix(double M[4][4]) {
 		}
 	}
 }
-void copyMatrix(double src[4][4], double des[4][4],bool resetSrc=false) {
+void copyMatrix(double src[4][4], double des[4][4], bool resetSrc = false) {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
 			des[i][j] = src[i][j];
@@ -280,7 +311,7 @@ void copyMatrix(double src[4][4], double des[4][4],bool resetSrc=false) {
 		resetToIdentityMatrix(src);
 	}
 }
-void calMMulM(double M[4][4], double M2[4][4],double MResult[4][4]) {
+void calMMulM(double M[4][4], double M2[4][4], double MResult[4][4]) {
 	static double mulResultTemp[4][4];
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -292,12 +323,140 @@ void calMMulM(double M[4][4], double M2[4][4],double MResult[4][4]) {
 	}
 	copyMatrix(mulResultTemp, MResult);
 }
+point3DInDouble calMMulP(double M[4][4], point3DInDouble p) {
+	point3DInDouble result(0.0, 0.0, 0.0, 0.0);
+	double pTemp[4] = { p.getX(),p.getY(),p.getZ(),p.getW() };
+	double resultTemp[4];
+	for (int i = 0; i < 4; i++) {
+		resultTemp[i] = 0;
+		for (int j = 0; j < 4; j++) {
+			resultTemp[i] += M[i][j] * pTemp[j];
+		}
+	}
+	result.setX(resultTemp[0]);
+	result.setY(resultTemp[1]);
+	result.setZ(resultTemp[2]);
+	result.setW(resultTemp[3]);
+	return result;
+}
 void calPM(double pmH, double pmY, double pmTheta) {
 	//!!!!! PM[1][1] wait for viewport command
 	PM[2][2] = pmY * tan(angleToRadian(pmTheta)) / (pmY - pmH);
 	PM[3][2] = tan(angleToRadian(pmTheta));
 	PM[2][3] = pmH * pmY * tan(angleToRadian(pmTheta)) / (pmH - pmY);
 	PM[3][3] = 0.0;
+}
+vector<objectBase> clipping(vector<objectBase> objs) {
+	for (int i = 0; i < objs.size(); i++)
+	{
+		for (int j = 0; j < objs[i].plane.size(); j++)
+		{
+			for (int pe = 0; pe < 6; pe++)  //plane equation
+			{
+				vector<point3DInDouble> pTemp;
+				point3DInDouble a(0.0, 0.0, 0.0), b(0.0, 0.0, 0.0);
+				double c1, c2;
+				for (int k = 0; k < objs[i].plane[j].n; k++)
+				{
+					int aNO = objs[i].plane[j].pointNO[k];
+					int bNO = 0;
+					a.setX(objs[i].pList[aNO].getX());
+					a.setY(objs[i].pList[aNO].getY());
+					a.setZ(objs[i].pList[aNO].getZ());
+					a.setW(objs[i].pList[aNO].getW());
+					if (k == objs[i].plane[j].n - 1) { bNO = 0; }
+					else { bNO = aNO + 1; }
+					b.setX(objs[i].pList[bNO].getX());
+					b.setY(objs[i].pList[bNO].getY());
+					b.setZ(objs[i].pList[bNO].getZ());
+					b.setW(objs[i].pList[bNO].getW());
+					switch (pe)
+					{
+					case 0:
+						c1 = a.getW() + a.getX();
+						c2 = b.getW() + b.getX();
+						break;
+					case 1:
+						c1 = a.getW() - a.getX();
+						c2 = b.getW() - b.getX();
+						break;
+					case 2:
+						c1 = a.getW() + a.getY();
+						c2 = b.getW() + b.getY();
+						break;
+					case 3:
+						c1 = a.getW() - a.getY();
+						c2 = b.getW() - b.getY();
+						break;
+					case 4:
+						c1 = a.getZ();
+						c2 = b.getZ();
+						break;
+					case 5:
+						c1 = a.getW() - a.getZ();
+						c2 = b.getW() - b.getZ();
+						break;
+					default:
+						break;
+					}
+					if (c1 < 0 && c2 < 0) {/*reject */ }
+					else if (c1>=0&&c2>=0)
+					{
+						if (pTemp.size()!=0)
+						{
+							if (pTemp.back().getX()!=b.getX()|| pTemp.back().getY() != b.getY()|| pTemp.back().getZ() != b.getZ())
+							{pTemp.push_back(b);}
+						}
+						else
+						{pTemp.push_back(b);}
+					}
+					else  //clip the line
+					{
+						double t = c1 / (c1 - c2);
+						double x = a.getX() + t * (b.getX() - a.getX());
+						double y = a.getY() + t * (b.getY() - a.getY());
+						double z = a.getZ() + t * (b.getZ() - a.getZ());
+						double w = a.getW() + t * (b.getW() - a.getW());
+						point3DInDouble clippedP(x, y, z, w);
+						if (c1>=0&&c2<0) //in>out
+						{
+							if (pTemp.size()!=0)
+							{
+								if (pTemp.back().getX() != clippedP.getX() || pTemp.back().getY() != clippedP.getY() || pTemp.back().getZ() != clippedP.getZ())
+								{
+									pTemp.push_back(clippedP);
+								}
+							}
+							else
+							{
+								pTemp.push_back(clippedP);
+							}
+						}
+						else if (c1<0 && c2>=0)  //out>in
+						{
+							if (pTemp.size()==0)
+							{
+								pTemp.push_back(clippedP);
+							}
+							else
+							{
+								if (pTemp.back().getX() != clippedP.getX() || pTemp.back().getY() != clippedP.getY() || pTemp.back().getZ() != clippedP.getZ())
+								{
+									pTemp.push_back(clippedP);
+								}
+							}
+							pTemp.push_back(b);
+						}
+
+					}
+				
+				}
+				objs[i].plane[j].n = pTemp.size();
+				objs[i].plane[j].pointInPoly = pTemp;
+			}
+		}
+	}
+	return objs;
 }
 //void calRotateTMMulTM(double angleTransformationMatrix[4][4]) {
 //	double temp[4][4];
@@ -371,7 +530,7 @@ void drawAllPoint() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	list<point> ::iterator p;
 	for (p = pointList.begin(); p != pointList.end(); p++) {
-		drawSquare(p->getX(), (windowH-(p->getY())));
+		drawSquare(p->getX(), (windowH - (p->getY())));
 	}
 	glutSwapBuffers();
 }
@@ -602,31 +761,31 @@ void drawLine(point src, point des) {
 	//}
 
 }
-void saveToSideList(double result[3][4]) {
-	pointInDouble p0(result[0][0], result[1][0]),
-		p1(result[0][1], result[1][1]),
-		p2(result[0][2], result[1][2]),
-		p3(result[0][3], result[1][3]);
-
-	windowSidePair.push_back(make_pair(p0, p1));
-
-	windowSidePair.push_back(make_pair(p1, p2));
-
-	windowSidePair.push_back(make_pair(p2, p3));
-
-	windowSidePair.push_back(make_pair(p3, p0));
-}
-void saveToSideList(double result[3][3]) {
-	pointInDouble p0(result[0][0], result[1][0]),
-		p1(result[0][1], result[1][1]),
-		p2(result[0][2], result[1][2]);
-
-	windowSidePair.push_back(make_pair(p0, p1));
-
-	windowSidePair.push_back(make_pair(p1, p2));
-
-	windowSidePair.push_back(make_pair(p2, p0));
-}
+//void saveToSideList(double result[3][4]) {
+//	pointInDouble p0(result[0][0], result[1][0]),
+//		p1(result[0][1], result[1][1]),
+//		p2(result[0][2], result[1][2]),
+//		p3(result[0][3], result[1][3]);
+//
+//	windowSidePair.push_back(make_pair(p0, p1));
+//
+//	windowSidePair.push_back(make_pair(p1, p2));
+//
+//	windowSidePair.push_back(make_pair(p2, p3));
+//
+//	windowSidePair.push_back(make_pair(p3, p0));
+//}
+//void saveToSideList(double result[3][3]) {
+//	pointInDouble p0(result[0][0], result[1][0]),
+//		p1(result[0][1], result[1][1]),
+//		p2(result[0][2], result[1][2]);
+//
+//	windowSidePair.push_back(make_pair(p0, p1));
+//
+//	windowSidePair.push_back(make_pair(p1, p2));
+//
+//	windowSidePair.push_back(make_pair(p2, p0));
+//}
 void drawBorder(double vxl, double vxr, double vyb, double vyt) {
 	point a(vxl, vyt), b(vxl, vyb), c(vxr, vyt), d(vxr, vyb);   //    a-----c
 	drawLine(a, b);												//    |     |
@@ -634,85 +793,81 @@ void drawBorder(double vxl, double vxr, double vyb, double vyt) {
 	drawLine(b, d);
 	drawLine(c, d);
 }
-pair<double,double> windowToViewport(double _Xw,double _Yw,double wxl,double wxr,double wyb,double wyt,double vxl,double vxr,double vyb,double vyt) {
-	
+pair<double, double> windowToViewport(double _Xw, double _Yw, double wxl, double wxr, double wyb, double wyt, double vxl, double vxr, double vyb, double vyt) {
+
 	double Xv, Yv, Xw = _Xw, Yw = _Yw;
 	double Sx = (vxr - vxl) / (wxr - wxl);
 	double Sy = (vyt - vyb) / (wyt - wyb);
 	Xv = (vxl + (Xw - wxl) * Sx);
 	Yv = (vyb + (Yw - wyb) * Sy);
-	
+
 	return make_pair(Xv, Yv);
 }
-pair<point, point> clipping(double vx0,double vy0,double vx1,double vy1,double vxl, double vxr, double vyb, double vyt){
-
-
-	OutCode code0 = computeOutCode(vx0, vy0,  vxl,  vxr,  vyb,  vyt);
-	OutCode	code1 = computeOutCode(vx1, vy1,  vxl,  vxr,  vyb,  vyt);
-
-
-
-	while (true) {
-		if (!(code0 | code1)) {
-			// bitwise OR is 0: both points inside window; trivially accept and exit loop
-			return make_pair(point(vx0, vy0), point(vx1, vy1));
-			break;
-		}
-		else if (code0 & code1) {
-			// bitwise AND is not 0: both points share an outside zone (LEFT, RIGHT, TOP,
-			// or BOTTOM), so both must be outside window; exit loop (accept is false)
-			return make_pair(point(NULL,NULL), point(NULL, NULL));
-			break;
-		}
-		else {
-			// failed both tests, so calculate the line segment to clip
-			// from an outside point to an intersection with clip edge
-			double x=0.0, y=0.0;
-
-			// At least one endpoint is outside the clip rectangle; pick it.
-			OutCode outcodeOut = code1 > code0 ? code1 : code0;
-
-			// Now find the intersection point;
-			// use formulas:
-			//   slope = (y1 - y0) / (x1 - x0)
-			//   x = x0 + (1 / slope) * (ym - y0), where ym is ymin or ymax
-			//   y = y0 + slope * (xm - x0), where xm is xmin or xmax
-			// No need to worry about divide-by-zero because, in each case, the
-			// outcode bit being tested guarantees the denominator is non-zero
-			if (outcodeOut & TOP) {           // point is above the clip window
-				x = vx0 + (vx1 - vx0) * (vyt - vy0) / (vy1 - vy0);
-				y = vyt;
-			}
-			else if (outcodeOut & BOTTOM) { // point is below the clip window
-				x = vx0 + (vx1 - vx0) * (vyb - vy0) / (vy1 - vy0);
-				y = vyb;
-			}
-			else if (outcodeOut & RIGHT) {  // point is to the right of clip window
-				y = vy0 + (vy1 - vy0) * (vxr - vx0) / (vx1 - vx0);
-				x = vxr;
-			}
-			else if (outcodeOut & LEFT) {   // point is to the left of clip window
-				y = vy0 + (vy1 - vy0) * (vxl - vx0) / (vx1 - vx0);
-				x = vxl;
-			}
-
-			// Now we move outside point to intersection point to clip
-			// and get ready for next pass.
-			if (outcodeOut == code0) {
-				vx0 = x;
-				vy0 = y;
-				code0 = computeOutCode(vx0, vy0, vxl, vxr, vyb, vyt);
-			}
-			else {
-				vx1 = x;
-				vy1 = y;
-				code1 = computeOutCode(vx1, vy1, vxl, vxr, vyb, vyt);
-			}
-		}
-	}
-
-
-}
+//pair<point, point> clipping(double vx0, double vy0, double vx1, double vy1, double vxl, double vxr, double vyb, double vyt) {
+//	OutCode code0 = computeOutCode(vx0, vy0, vxl, vxr, vyb, vyt);
+//	OutCode	code1 = computeOutCode(vx1, vy1, vxl, vxr, vyb, vyt);
+//
+//	while (true) {
+//		if (!(code0 | code1)) {
+//			// bitwise OR is 0: both points inside window; trivially accept and exit loop
+//			return make_pair(point(vx0, vy0), point(vx1, vy1));
+//			break;
+//		}
+//		else if (code0 & code1) {
+//			// bitwise AND is not 0: both points share an outside zone (LEFT, RIGHT, TOP,
+//			// or BOTTOM), so both must be outside window; exit loop (accept is false)
+//			return make_pair(point(NULL, NULL), point(NULL, NULL));
+//			break;
+//		}
+//		else {
+//			// failed both tests, so calculate the line segment to clip
+//			// from an outside point to an intersection with clip edge
+//			double x = 0.0, y = 0.0;
+//
+//			// At least one endpoint is outside the clip rectangle; pick it.
+//			OutCode outcodeOut = code1 > code0 ? code1 : code0;
+//
+//			// Now find the intersection point;
+//			// use formulas:
+//			//   slope = (y1 - y0) / (x1 - x0)
+//			//   x = x0 + (1 / slope) * (ym - y0), where ym is ymin or ymax
+//			//   y = y0 + slope * (xm - x0), where xm is xmin or xmax
+//			// No need to worry about divide-by-zero because, in each case, the
+//			// outcode bit being tested guarantees the denominator is non-zero
+//			if (outcodeOut & TOP) {           // point is above the clip window
+//				x = vx0 + (vx1 - vx0) * (vyt - vy0) / (vy1 - vy0);
+//				y = vyt;
+//			}
+//			else if (outcodeOut & BOTTOM) { // point is below the clip window
+//				x = vx0 + (vx1 - vx0) * (vyb - vy0) / (vy1 - vy0);
+//				y = vyb;
+//			}
+//			else if (outcodeOut & RIGHT) {  // point is to the right of clip window
+//				y = vy0 + (vy1 - vy0) * (vxr - vx0) / (vx1 - vx0);
+//				x = vxr;
+//			}
+//			else if (outcodeOut & LEFT) {   // point is to the left of clip window
+//				y = vy0 + (vy1 - vy0) * (vxl - vx0) / (vx1 - vx0);
+//				x = vxl;
+//			}
+//
+//			// Now we move outside point to intersection point to clip
+//			// and get ready for next pass.
+//			if (outcodeOut == code0) {
+//				vx0 = x;
+//				vy0 = y;
+//				code0 = computeOutCode(vx0, vy0, vxl, vxr, vyb, vyt);
+//			}
+//			else {
+//				vx1 = x;
+//				vy1 = y;
+//				code1 = computeOutCode(vx1, vy1, vxl, vxr, vyb, vyt);
+//			}
+//		}
+//	}
+//
+//
+//}
 //void fakeClipping(double vxl, double vxr, double vyb, double vyt) {
 //	list<point> ::iterator p;
 //	for (p= pointList.begin(); p != pointList.end(); p++) {
@@ -772,14 +927,14 @@ void modeSwitch(string command) {
 			transformationMatrix3D[2][2] = transformationMatrix3D[2][2] * z;
 
 			matrixOutput(transformationMatrix3D);
-			
+
 		}
 		else if (words[0] == "rotate")
 		{
 			cout << "Rotate" << endl;
 			double angleTransformationMatrix[4][4] = { 1.0, 0.0, 0.0, 0.0,
-												       0.0, 1.0, 0.0, 0.0,
-												       0.0, 0.0, 1.0, 0.0,
+													   0.0, 1.0, 0.0, 0.0,
+													   0.0, 0.0, 1.0, 0.0,
 													   0.0, 0.0, 0.0, 1.0 };
 			//double degree = atof(words[1].c_str());
 			double degreeX = atof(words[1].c_str());
@@ -797,8 +952,8 @@ void modeSwitch(string command) {
 			angleTransformationMatrix[0][1] =-1.0*sin(angleToRadian(degree)) ;
 			angleTransformationMatrix[1][0] = sin(angleToRadian(degree));
 			angleTransformationMatrix[1][1] = cos(angleToRadian(degree));*/
-			angleTransformationMatrix[0][0] = cosZ*cosY;
-			angleTransformationMatrix[0][1] = -1.0*sinZ*cosX+cosZ*sinY*sinX;
+			angleTransformationMatrix[0][0] = cosZ * cosY;
+			angleTransformationMatrix[0][1] = -1.0 * sinZ * cosX + cosZ * sinY * sinX;
 			angleTransformationMatrix[0][2] = sinZ * sinX + cosZ * sinY * cosX;
 			angleTransformationMatrix[1][0] = sinZ * cosY;
 			angleTransformationMatrix[1][1] = cosZ * cosX + sinZ * sinY * sinX;
@@ -825,7 +980,7 @@ void modeSwitch(string command) {
 			transformationMatrix3D[1][3] = transformationMatrix3D[1][3] + y;
 			transformationMatrix3D[2][3] = transformationMatrix3D[2][3] + z;
 			matrixOutput(transformationMatrix3D);
-			
+
 		}
 		else if (words[0] == "observer") {
 			double eX = atof(words[1].c_str());
@@ -835,15 +990,15 @@ void modeSwitch(string command) {
 			double colY = atof(words[5].c_str());
 			double colZ = atof(words[6].c_str());
 			double tilt = atof(words[7].c_str());
-			double pmH= atof(words[8].c_str());
+			double pmH = atof(words[8].c_str());
 			double pmY = atof(words[9].c_str());
 			double pmTheta = atof(words[10].c_str());
 			static double negativeEyeMatrix[4][4] = { 1.0, 0.0, 0.0, -1.0 * eX,
 													  0.0, 1.0, 0.0, -1.0 * eY,
 													  0.0, 0.0, 1.0, -1.0 * eZ,
-												      0.0, 0.0, 0.0, 1.0};
+													  0.0, 0.0, 0.0, 1.0 };
 			static double GRM[4][4] = { 1.0, 0.0, 0.0, 0.0,
-						   			    0.0, 1.0, 0.0, 0.0,
+										0.0, 1.0, 0.0, 0.0,
 										0.0, 0.0, 1.0, 0.0,
 										0.0, 0.0, 0.0, 1.0 };
 			static double mirrorMatrix[4][4] = { -1.0, 0.0, 0.0, 0.0,
@@ -880,7 +1035,7 @@ void modeSwitch(string command) {
 			cout << "mirror:" << endl;
 			matrixOutput(mirrorMatrix);
 			tiltMatrix[0][0] = cos(angleToRadian(tilt));
-			tiltMatrix[0][1] = sin(angleToRadian(tilt)) ;
+			tiltMatrix[0][1] = sin(angleToRadian(tilt));
 			tiltMatrix[1][0] = -1.0 * sin(angleToRadian(tilt));
 			tiltMatrix[1][1] = cos(angleToRadian(tilt));
 			cout << "tile:" << endl;
@@ -891,14 +1046,82 @@ void modeSwitch(string command) {
 
 			calPM(pmH, pmY, pmTheta);
 		}
+
+		else if (words[0] == "object") {
+			//cout << "object??????" << endl;
+			string lineInFile;
+			char space_char = ' ';
+			vector<string> s{};
+			string objectFileName = words[1].c_str();
+
+			objectFile.open(objectFileName);
+			if (!objectFile.is_open()) {
+				perror("Error open");
+				exit(EXIT_FAILURE);
+			}
+			getline(objectFile, lineInFile);
+			//cout << lineInFile << endl;
+
+			istringstream iss(lineInFile);
+			for (string command; iss >> command; ) {
+				s.push_back(command);
+			}
+			int pointNum = atoi(s[0].c_str());
+			int planeNum = atoi(s[1].c_str());
+			objectBase objectTemp;
+			for (int i = 0; i < pointNum; i++)
+			{
+				getline(objectFile, lineInFile);
+
+				cout << lineInFile << endl;
+
+				s.clear();
+				istringstream iss(lineInFile);
+				for (string command; iss >> command; ) {
+					s.push_back(command);
+				}
+
+				objectTemp.pList.push_back(point3DInDouble(atof(s[0].c_str()), atof(s[1].c_str()), atof(s[2].c_str()), 1));
+
+			}
+			poly polyTemp;
+			for (int i = 0; i < planeNum; i++)
+			{
+				getline(objectFile, lineInFile);
+
+				cout << lineInFile << endl;
+
+				s.clear();
+				istringstream iss(lineInFile);
+				for (string command; iss >> command; ) {
+					s.push_back(command);
+				}
+				polyTemp.n = atoi(s[0].c_str());
+				for (int i = 1; i < s.size(); i++)
+				{
+					polyTemp.pointNO.push_back(atoi(s[i].c_str()));
+					//cout << s[i]<<endl;
+				}
+				objectTemp.plane.push_back(polyTemp);
+
+			}
+			objs.push_back(objectTemp);
+			objectFile.close();
+		}
 		else if (words[0] == "viewport")
 		{
-		double vxl = atof(words[1].c_str());
-		double vxr = atof(words[2].c_str());
-		double vyb = atof(words[3].c_str());
-		double vyt = atof(words[4].c_str());
-		//aspect ratio for pm
-		PM[1][1] = (vxr - vxl) / (vyt - vyb);
+			double vxl = atof(words[1].c_str());
+			double vxr = atof(words[2].c_str());
+			double vyb = atof(words[3].c_str());
+			double vyt = atof(words[4].c_str());
+			//aspect ratio for pm
+			PM[1][1] = (vxr - vxl) / (vyt - vyb);
+
+		}
+		else if (words[0] == "display") {
+
+		}
+		else if (words[0] == "nobackfaces") {
 
 		}
 		//else if (words[0] == "square")
@@ -941,7 +1164,7 @@ void modeSwitch(string command) {
 		//	triangleCounter += 1;
 		//	cout << "You have" << setw(2) << triangleCounter << " triangles." << endl;
 		//}
-		
+
 		//else if (words[0] == "view")
 		//{
 		//	
@@ -963,7 +1186,6 @@ void modeSwitch(string command) {
 		//		//world to view space
 		//		tie(firstVx,firstVy) = windowToViewport(windowSidePair[i].first.getX(), windowSidePair[i].first.getY(),wxl,wxr,wyb,wyt,vxl,vxr,vyb,vyt);
 		//		tie(secondVx, secondVy) = windowToViewport(windowSidePair[i].second.getX(), windowSidePair[i].second.getY(), wxl, wxr, wyb, wyt, vxl, vxr, vyb, vyt);
-
 		//		//clipping
 		//		tie(clippingP0,clippingP1)=clipping(firstVx, firstVy, secondVx, secondVy,vxl, vxr, vyb, vyt);
 		//		//point viewP0(firstVx,firstVy), viewP1(secondVx,secondVy);
@@ -1006,27 +1228,29 @@ void modeSwitch(string command) {
 		//	matrixOutput(wvm);
 		//	system("pause");
 		//}
-		else if (words[0] == "clearData")
-		{
-			//cout << "--clear data--" << endl;
-			pointList.clear();
-			windowSidePair.clear();
-			squareCounter = 0;
-		}
-		else if (words[0] == "clearScreen")
-		{
-			//cout << "--clear screen--" << endl;
-			pointList.clear();
-			drawAllPoint();
-			/*clippingPointList.clear();
-			drawClippingPoint();*/
-		}
+
+		//else if (words[0] == "clearData")
+		//{
+		//	//cout << "--clear data--" << endl;
+		//	pointList.clear();
+		//	/*windowSidePair.clear();*/
+		//	squareCounter = 0;
+		//}
+
+		//else if (words[0] == "clearScreen")
+		//{
+		//	//cout << "--clear screen--" << endl;
+		//	pointList.clear();
+		//	drawAllPoint();
+		//	/*clippingPointList.clear();
+		//	drawClippingPoint();*/
+		//}
 		else if (words[0] == "reset")
 		{
 			//cout << "--reset--" << endl;
-			for (int i = 0; i < 3; i++)
+			for (int i = 0; i < 4; i++)
 			{
-				for (int j = 0; j < 3; j++)
+				for (int j = 0; j < 4; j++)
 				{
 					transformationMatrix3D[i][j] = defaultMatrix3D[i][j];
 				}
@@ -1034,20 +1258,26 @@ void modeSwitch(string command) {
 		}
 		else if (words[0] == "end")
 		{
-			//cout << "--end--" << endl;
+
+			//cout << "end" << endl;
 
 			quit();
 		}
 		else if (words[0] == "#") {
 			for (int j = 0; j < words.size(); j++)
 			{
-				cout<<words[j]<<" ";
+				cout << words[j] << " ";
 			}
 			cout << endl;
 		}
-		else  // "NULL" or #......
-		{
-			//cout << "--skip--" << endl;
+		/*	else if (words[0] != "")
+			{
+				cout << words[0] << endl;
+			}*/
+		else {  // "NULL" or
+		//skip
+			system("pause");
+			cout << "skip" << endl;
 		}
 	}
 }
@@ -1225,10 +1455,27 @@ void display() {
 //	}
 //}
 int main(int argc, char** argv) {
+	string lineInFile;
 	system("pause");
 	glutInit(&argc, argv);
 	fileName = argv[1];
-	
+	inputFile.open(fileName);
+	if (!inputFile.is_open()) {
+		perror("Error open");
+		exit(EXIT_FAILURE);
+	}
+	getline(inputFile, lineInFile);
+	char space_char = ' ';
+	vector<string> words{};
+	istringstream iss(lineInFile);
+	for (string command; iss >> command; ) {
+		words.push_back(command);
+	}
+	windowW = atoi(words[0].c_str());
+	windowH = atoi(words[1].c_str());
+	cout << "glut window size " << windowW << "x" << windowH << endl;
+	inputFile.close();
+
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 	glutInitWindowSize(windowW, windowH);
 	glutInitWindowPosition(0, 0);
