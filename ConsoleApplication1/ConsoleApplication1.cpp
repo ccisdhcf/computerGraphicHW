@@ -23,10 +23,12 @@ class point
 private:
 	int x = 0;
 	int y = 0;
+	int color = 0;
 public:
-	point(int _x, int _y) {
+	point(int _x, int _y,int _color=0) {
 		x = _x;
 		y = _y;
+		color = _color;
 	};
 	int getX() {
 		return x;
@@ -34,11 +36,17 @@ public:
 	int getY() {
 		return y;
 	}
+	int getColor() {
+		return color;
+	}
 	void setX(int new_x) {
 		x = new_x;
 	}
 	void setY(int new_y) {
 		y = new_y;
+	}
+	void setColor(int new_color) {
+		color = new_color;
 	}
 
 };
@@ -104,7 +112,7 @@ private:
 	double y;
 	double z;
 	double w;
-	
+
 public:
 	point3DInDouble(double _x, double _y, double _z, double _w = 1.0) {
 		x = _x;
@@ -140,11 +148,12 @@ public:
 class poly {
 public:
 	int n;//n-sides
-	vector<int>pointNO;  //before clipping
+	bool visible;
 	vector<point3DInDouble> pointInPoly;  //after clipping use
 	poly() {
 		n = 0;
-		pointNO.clear();
+		visible = true;
+
 		pointInPoly.clear();
 	};
 };
@@ -157,25 +166,16 @@ public:
 		plane.clear();
 	}
 };
-double vectorLength(point3DInDouble p0) {
 
-	return sqrt(p0.getX() * p0.getX() + p0.getY() * p0.getY() + p0.getZ() * p0.getZ());
-}
-point3DInDouble cross(point3DInDouble p0, point3DInDouble p1) {
-	double x, y, z;
-	x = p0.getY() * p1.getZ() - p0.getZ() * p1.getY();
-	y = p0.getZ() * p1.getX() - p0.getX() * p1.getZ();
-	z = p0.getX() * p1.getY() - p0.getY() * p1.getX();
-	return point3DInDouble(x, y, z);
-}
 ifstream inputFile;
 ifstream objectFile;
 //vector<pair<pointInDouble, pointInDouble>> windowSidePair;
 //vector<pair<point, point>> viewSidePair;
 list<point> pointList;
+
 //list<point3DInDouble> pointList3D;
 //list<point> clippingPointList;
-list<point> pointListBackUp;
+//list<point> pointListBackUp;
 vector<objectBase> objs;
 point lineTemp = point(NULL, NULL);
 //point circleTemp = point(NULL, NULL);
@@ -185,6 +185,7 @@ point lineTemp = point(NULL, NULL);
 int lineCounter = 0;
 int squareCounter = 0;
 int triangleCounter = 0;
+bool nobackfaces = false;
 //int mode = 0; //  d,l,p,o,c,r,q
 string fileName = "";
 int windowH = 0;
@@ -200,10 +201,10 @@ static double defaultMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
 									  0.0, 0.0, 1.0, 0.0,
 									  0.0, 0.0, 0.0, 1.0 };
 
-static double mulResultTemp[4][4] = { 1.0, 0.0, 0.0, 0.0,
-									  0.0, 1.0, 0.0, 0.0,
-									  0.0, 0.0, 1.0, 0.0,
-									  0.0, 0.0, 0.0, 1.0 };
+//static double mulResultTemp[4][4] = { 1.0, 0.0, 0.0, 0.0,
+//									  0.0, 1.0, 0.0, 0.0,
+//									  0.0, 0.0, 1.0, 0.0,
+//									  0.0, 0.0, 0.0, 1.0 };
 static double transformationMatrix3D[4][4] = { 1.0, 0.0, 0.0, 0.0,
 											 0.0, 1.0, 0.0, 0.0,
 											 0.0, 0.0, 1.0 ,0.0,
@@ -216,6 +217,10 @@ static double tempMatrix1[4][4] = { 1.0, 0.0, 0.0, 0.0,
 											 0.0, 1.0, 0.0, 0.0,
 											 0.0, 0.0, 1.0 ,0.0,
 											 0.0, 0.0, 0.0, 1.0 };
+static double PMMulEM[4][4] = { 1.0, 0.0, 0.0, 0.0,
+											 0.0, 1.0, 0.0, 0.0,
+											 0.0, 0.0, 1.0 ,0.0,
+											 0.0, 0.0, 0.0, 1.0 };
 static double PM[4][4] = { 1.0, 0.0, 0.0, 0.0,
 							 0.0, 1.0, 0.0, 0.0,
 							 0.0, 0.0, 1.0 ,0.0,
@@ -224,6 +229,7 @@ static double EM[4][4] = { 1.0, 0.0, 0.0, 0.0,
 							 0.0, 1.0, 0.0, 0.0,
 							 0.0, 0.0, 1.0 ,0.0,
 							 0.0, 0.0, 0.0, 1.0 };
+double wvm[4][4];
 //static double squareMatrix[3][4] = { -1.0,-1.0, 1.0, 1.0,
 //									   -1.0, 1.0, 1.0,-1.0,
 //										1.0, 1.0 ,1.0, 1.0 };
@@ -282,6 +288,17 @@ void matrixOutput(double matrix[3][3]) {
 	}
 	//cout << endl;
 }
+double vectorLength(point3DInDouble p0) {
+
+	return sqrt(p0.getX() * p0.getX() + p0.getY() * p0.getY() + p0.getZ() * p0.getZ());
+}
+point3DInDouble cross(point3DInDouble p0, point3DInDouble p1) {
+	double x, y, z;
+	x = p0.getY() * p1.getZ() - p0.getZ() * p1.getY();
+	y = p0.getZ() * p1.getX() - p0.getX() * p1.getZ();
+	z = p0.getX() * p1.getY() - p0.getY() * p1.getX();
+	return point3DInDouble(x, y, z);
+}
 //void matrixOutput(double matrix[3][4]) {
 //	for (int i = 0; i < 3; i++)
 //	{
@@ -312,12 +329,13 @@ void copyMatrix(double src[4][4], double des[4][4], bool resetSrc = false) {
 	}
 }
 void calMMulM(double M[4][4], double M2[4][4], double MResult[4][4]) {
-	static double mulResultTemp[4][4];
+	double mulResultTemp[4][4];
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
-			mulResultTemp[i][j] = 0;
+			mulResultTemp[i][j] = 0.0;
 			for (int k = 0; k < 4; k++) {
 				mulResultTemp[i][j] += M[i][k] * M2[k][j];
+				//cout << i << " " << j << " " <<k<<" " << M[i][k] * M2[k][j]<<endl;
 			}
 		}
 	}
@@ -339,6 +357,38 @@ point3DInDouble calMMulP(double M[4][4], point3DInDouble p) {
 	result.setW(resultTemp[3]);
 	return result;
 }
+point cal2DP(double M[4][4], point3DInDouble p) {
+	point result(0, 0);
+	double pTemp[4] = { p.getX(),p.getY(),p.getZ(),p.getW() };
+	double resultTemp[4];
+	for (int i = 0; i < 4; i++) {
+		resultTemp[i] = 0;
+		for (int j = 0; j < 4; j++) {
+			resultTemp[i] += M[i][j] * pTemp[j];
+		}
+	}
+	//cout << "?P:" << resultTemp[0] << " " << resultTemp[1] << endl;
+	result.setX(int(resultTemp[0]));
+	result.setY(int(resultTemp[1]));
+
+	return result;
+}
+point cal2DP(double M[4][4], pointInDouble p) {
+	point result(0, 0);
+	double pTemp[4] = { p.getX(),p.getY() };
+	double resultTemp[4];
+	for (int i = 0; i < 4; i++) {
+		resultTemp[i] = 0;
+		for (int j = 0; j < 2; j++) {
+			resultTemp[i] += M[i][j] * pTemp[j];
+		}
+	}
+	//cout << "?P:" << resultTemp[0] << " " << resultTemp[1] << endl;
+	result.setX(int(resultTemp[0]));
+	result.setY(int(resultTemp[1]));
+
+	return result;
+}
 void calPM(double pmH, double pmY, double pmTheta) {
 	//!!!!! PM[1][1] wait for viewport command
 	PM[2][2] = pmY * tan(angleToRadian(pmTheta)) / (pmY - pmH);
@@ -356,20 +406,19 @@ vector<objectBase> clipping(vector<objectBase> objs) {
 				vector<point3DInDouble> pTemp;
 				point3DInDouble a(0.0, 0.0, 0.0), b(0.0, 0.0, 0.0);
 				double c1, c2;
-				for (int k = 0; k < objs[i].plane[j].n; k++)
+				for (int k = 0; k < objs[i].plane[j].pointInPoly.size(); k++)
 				{
-					int aNO = objs[i].plane[j].pointNO[k];
 					int bNO = 0;
-					a.setX(objs[i].pList[aNO].getX());
-					a.setY(objs[i].pList[aNO].getY());
-					a.setZ(objs[i].pList[aNO].getZ());
-					a.setW(objs[i].pList[aNO].getW());
-					if (k == objs[i].plane[j].n - 1) { bNO = 0; }
-					else { bNO = aNO + 1; }
-					b.setX(objs[i].pList[bNO].getX());
-					b.setY(objs[i].pList[bNO].getY());
-					b.setZ(objs[i].pList[bNO].getZ());
-					b.setW(objs[i].pList[bNO].getW());
+					a.setX(objs[i].plane[j].pointInPoly[k].getX());
+					a.setY(objs[i].plane[j].pointInPoly[k].getY());
+					a.setZ(objs[i].plane[j].pointInPoly[k].getZ());
+					a.setW(objs[i].plane[j].pointInPoly[k].getW());
+					if (k == objs[i].plane[j].pointInPoly.size() - 1) { bNO = 0; }
+					else { bNO = k + 1; }
+					b.setX(objs[i].plane[j].pointInPoly[bNO].getX());
+					b.setY(objs[i].plane[j].pointInPoly[bNO].getY());
+					b.setZ(objs[i].plane[j].pointInPoly[bNO].getZ());
+					b.setW(objs[i].plane[j].pointInPoly[bNO].getW());
 					switch (pe)
 					{
 					case 0:
@@ -400,15 +449,19 @@ vector<objectBase> clipping(vector<objectBase> objs) {
 						break;
 					}
 					if (c1 < 0 && c2 < 0) {/*reject */ }
-					else if (c1>=0&&c2>=0)
+					else if (c1 >= 0 && c2 >= 0)
 					{
-						if (pTemp.size()!=0)
+						if (pTemp.size() != 0)
 						{
-							if (pTemp.back().getX()!=b.getX()|| pTemp.back().getY() != b.getY()|| pTemp.back().getZ() != b.getZ())
-							{pTemp.push_back(b);}
+							if (pTemp.back().getX() != b.getX() || pTemp.back().getY() != b.getY() || pTemp.back().getZ() != b.getZ())
+							{
+								pTemp.push_back(b);
+							}
 						}
 						else
-						{pTemp.push_back(b);}
+						{
+							pTemp.push_back(b);
+						}
 					}
 					else  //clip the line
 					{
@@ -418,9 +471,9 @@ vector<objectBase> clipping(vector<objectBase> objs) {
 						double z = a.getZ() + t * (b.getZ() - a.getZ());
 						double w = a.getW() + t * (b.getW() - a.getW());
 						point3DInDouble clippedP(x, y, z, w);
-						if (c1>=0&&c2<0) //in>out
+						if (c1 >= 0 && c2 < 0) //in>out
 						{
-							if (pTemp.size()!=0)
+							if (pTemp.size() != 0)
 							{
 								if (pTemp.back().getX() != clippedP.getX() || pTemp.back().getY() != clippedP.getY() || pTemp.back().getZ() != clippedP.getZ())
 								{
@@ -432,9 +485,9 @@ vector<objectBase> clipping(vector<objectBase> objs) {
 								pTemp.push_back(clippedP);
 							}
 						}
-						else if (c1<0 && c2>=0)  //out>in
+						else if (c1 < 0 && c2 >= 0)  //out>in
 						{
-							if (pTemp.size()==0)
+							if (pTemp.size() == 0)
 							{
 								pTemp.push_back(clippedP);
 							}
@@ -449,7 +502,7 @@ vector<objectBase> clipping(vector<objectBase> objs) {
 						}
 
 					}
-				
+
 				}
 				objs[i].plane[j].n = pTemp.size();
 				objs[i].plane[j].pointInPoly = pTemp;
@@ -519,9 +572,15 @@ vector<objectBase> clipping(vector<objectBase> objs) {
 void quit() {
 	exit(1);
 }
-void drawSquare(int x, int y) {
+void drawSquare(int x, int y,int color) {
 	glPointSize(1);
-	glColor3f(1.0f, 0.0f, 0.0f);
+	if (color==1)
+	{
+		glColor3f(1.0f, 1.0f, 1.0f);
+	}
+	else {
+		glColor3f(1.0f, 0.0f, 0.0f);
+	}
 	glBegin(GL_POINTS);
 	glVertex2i(x, glutGet(GLUT_WINDOW_HEIGHT) - y);
 	glEnd();
@@ -530,7 +589,7 @@ void drawAllPoint() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	list<point> ::iterator p;
 	for (p = pointList.begin(); p != pointList.end(); p++) {
-		drawSquare(p->getX(), (windowH - (p->getY())));
+		drawSquare(p->getX(), (windowH - (p->getY())),p->getColor());
 	}
 	glutSwapBuffers();
 }
@@ -597,7 +656,7 @@ void drawAllPoint() {
 //}
 
 //void drawPolygon(){}    //drawLine is enough
-void drawLine(point src, point des) {
+void drawLine(point src, point des,int color=0) {
 	int dx = des.getX() - src.getX();
 	if (dx < 0) {   // des.x < src.x then switch if needed?
 		point temp = point(des.getX(), des.getY());
@@ -617,14 +676,14 @@ void drawLine(point src, point des) {
 	//cout<<slope<<" " << dx << " " << dy << " " << "\n";  //debug
 	if (dy == 0) {  //slope =0
 		for (int tempX = min(src.getX(), des.getX()); tempX < max(src.getX(), des.getX()); tempX++) {
-			pointList.push_back(point(tempX, des.getY()));
+			pointList.push_back(point(tempX, des.getY(),color));
 		}
 	}
 	else if (dx == 0) //slope=∞
 	{
 		for (int tempY = min(src.getY(), des.getY()); tempY < max(src.getY(), des.getY()); tempY += 1)
 		{
-			pointList.push_back(point(des.getX(), tempY));
+			pointList.push_back(point(des.getX(), tempY, color));
 		}
 	}
 	else if (0 < slope && slope <= 1) { // 0<slope<=1
@@ -650,19 +709,19 @@ void drawLine(point src, point des) {
 		int incE = dy * direction;
 		int incNE = dy * direction - dx;
 		float d = d_init;
-		pointList.push_back(point(x, y));
+		pointList.push_back(point(x, y, color));
 		while (x <= des.getX())
 		{
 			//cout << d << "\n\n";  //debug
 			if (d <= 0) {
-				pointList.push_back(point(x, y));
+				pointList.push_back(point(x, y, color));
 				x += 1;
 				//cout << x <<" " << y << "\n";  //debug
 				d += incE;
 			}
 			else
 			{
-				pointList.push_back(point(x, y));
+				pointList.push_back(point(x, y, color));
 				x += 1;
 				y += direction;
 				//cout << x <<" " << y << "\n";  //debug
@@ -677,19 +736,19 @@ void drawLine(point src, point des) {
 		int incE = dx;
 		int incNE = dx - dy * direction;
 		float d = d_init;
-		pointList.push_back(point(x, y));
+		pointList.push_back(point(x, y, color));
 		while (y * direction <= des.getY() * direction)
 		{
 			//cout << d << "\n\n";  //debug
 			if (d <= 0) {
-				pointList.push_back(point(x, y));
+				pointList.push_back(point(x, y, color));
 				y += direction;
 				//cout << x <<" " << y << "\n";  //debug
 				d += incE;
 			}
 			else
 			{
-				pointList.push_back(point(x, y));
+				pointList.push_back(point(x, y, color));
 				x += 1;
 				y += direction;
 				//cout << x <<" " << y << "\n";  //debug
@@ -787,22 +846,29 @@ void drawLine(point src, point des) {
 //	windowSidePair.push_back(make_pair(p2, p0));
 //}
 void drawBorder(double vxl, double vxr, double vyb, double vyt) {
-	point a(vxl, vyt), b(vxl, vyb), c(vxr, vyt), d(vxr, vyb);   //    a-----c
-	drawLine(a, b);												//    |     |
-	drawLine(a, c);											    //	  b-----d
-	drawLine(b, d);
-	drawLine(c, d);
+	point3DInDouble aD(-1, 1, 1.0), bD(-1, -1, 1.0), cD(1, 1, 1.0), dD(1, -1, 1.0);   //    a-----c
+	point a = cal2DP(wvm, aD);														  //    |     |
+	point b = cal2DP(wvm, bD);														  //    b-----d
+	point c = cal2DP(wvm, cD);
+	point d = cal2DP(wvm, dD);
+	/*cout << "wvm" << endl;
+	matrixOutput(wvm);*/
+	drawLine(a, b,1);												
+	drawLine(a, c,1);											  
+	drawLine(b, d,1);
+	drawLine(c, d,1);
 }
-pair<double, double> windowToViewport(double _Xw, double _Yw, double wxl, double wxr, double wyb, double wyt, double vxl, double vxr, double vyb, double vyt) {
+//pair<double, double> windowToViewport(double _Xw, double _Yw, double wxl, double wxr, double wyb, double wyt, double vxl, double vxr, double vyb, double vyt) {
+//
+//	double Xv, Yv, Xw = _Xw, Yw = _Yw;
+//	double Sx = (vxr - vxl) / (wxr - wxl);
+//	double Sy = (vyt - vyb) / (wyt - wyb);
+//	Xv = (vxl + (Xw - wxl) * Sx);
+//	Yv = (vyb + (Yw - wyb) * Sy);
+//
+//	return make_pair(Xv, Yv);
+//}
 
-	double Xv, Yv, Xw = _Xw, Yw = _Yw;
-	double Sx = (vxr - vxl) / (wxr - wxl);
-	double Sy = (vyt - vyb) / (wyt - wyb);
-	Xv = (vxl + (Xw - wxl) * Sx);
-	Yv = (vyb + (Yw - wyb) * Sy);
-
-	return make_pair(Xv, Yv);
-}
 //pair<point, point> clipping(double vx0, double vy0, double vx1, double vy1, double vxl, double vxr, double vyb, double vyt) {
 //	OutCode code0 = computeOutCode(vx0, vy0, vxl, vxr, vyb, vyt);
 //	OutCode	code1 = computeOutCode(vx1, vy1, vxl, vxr, vyb, vyt);
@@ -891,6 +957,16 @@ pair<double, double> windowToViewport(double _Xw, double _Yw, double wxl, double
 //		clippingPointList.push_back(newP);
 //	}
 //}
+void resetTM() {
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			transformationMatrix3D[i][j] = defaultMatrix3D[i][j];
+		}
+	}
+
+}
 void modeSwitch(string command) {
 	char space_char = ' ';
 	vector<string> words{};
@@ -982,7 +1058,102 @@ void modeSwitch(string command) {
 			matrixOutput(transformationMatrix3D);
 
 		}
+		else if (words[0] == "object") {
+			cout << "object" << endl << "TM" << endl;
+			matrixOutput(transformationMatrix3D);
+			//transformation*point
+
+			string lineInFile;
+			char space_char = ' ';
+			vector<string> s{};
+			string objectFileName = words[1].c_str();
+
+			objectFile.open(objectFileName);
+			if (!objectFile.is_open()) {
+				perror("Error open");
+				exit(EXIT_FAILURE);
+			}
+			getline(objectFile, lineInFile);
+			while (lineInFile == "")
+			{
+				getline(objectFile, lineInFile);
+			}
+			//cout << lineInFile << endl;
+
+			istringstream iss(lineInFile);
+			for (string command; iss >> command; ) {
+				s.push_back(command);
+			}
+			int pointNum = atoi(s[0].c_str());
+			int planeNum = atoi(s[1].c_str());
+			objectBase objectTemp;
+			for (int i = 0; i < pointNum; i++)
+			{
+				getline(objectFile, lineInFile);
+
+				//cout << lineInFile << endl;
+
+				s.clear();
+				istringstream iss(lineInFile);
+				for (string command; iss >> command; ) {
+					s.push_back(command);
+				}
+
+				objectTemp.pList.push_back(point3DInDouble(atof(s[0].c_str()), atof(s[1].c_str()), atof(s[2].c_str()), 1));
+
+			}
+
+			for (int i = 0; i < planeNum; i++)
+			{
+				getline(objectFile, lineInFile);
+				poly polyTemp;
+				//cout << lineInFile << endl;
+
+				s.clear();
+				istringstream iss(lineInFile);
+				for (string command; iss >> command; ) {
+					s.push_back(command);
+				}
+				polyTemp.n = atoi(s[0].c_str());
+				for (int i = 1; i < s.size(); i++)
+				{
+					polyTemp.pointInPoly.push_back(objectTemp.pList[int(atoi(s[i].c_str())) - 1]);
+					//cout << s[i]<<endl;
+				}
+				/*for (int i = 0; i < polyTemp.pointNO.size(); i++)
+				{
+					cout << polyTemp.pointNO[i];
+				}
+				cout << endl;*/
+				objectTemp.plane.push_back(polyTemp);
+
+			}
+			for (int j = 0; j < objectTemp.plane.size(); j++)
+			{
+				for (int k = 0; k < objectTemp.plane[j].pointInPoly.size(); k++)
+				{
+					//cout << i << " "<< j << " "<< k<<" " << pNO << endl;
+					point3DInDouble p(objectTemp.plane[j].pointInPoly[k].getX(), objectTemp.plane[j].pointInPoly[k].getY(), objectTemp.plane[j].pointInPoly[k].getZ(), objectTemp.plane[j].pointInPoly[k].getW())
+						, p_new(0.0, 0.0, 0.0);
+					//cout << "p: " << p.getX() << " " << p.getY()<<" "<< p.getZ() << " " << p.getW() << endl;
+					p_new = calMMulP(transformationMatrix3D, p);
+					objectTemp.plane[j].pointInPoly[k].setX(p_new.getX());
+					objectTemp.plane[j].pointInPoly[k].setY(p_new.getY());
+					objectTemp.plane[j].pointInPoly[k].setZ(p_new.getZ());
+					objectTemp.plane[j].pointInPoly[k].setW(p_new.getW());
+					//cout << "p_new: " << p_new.getX() << " " << p_new.getY() << " " << p_new.getZ() << " " << p_new.getW() << endl;
+
+				}
+			}
+
+			//resetTM();
+			objs.push_back(objectTemp);
+			objectFile.close();
+
+
+		}
 		else if (words[0] == "observer") {
+			cout << "observer" << endl;
 			double eX = atof(words[1].c_str());
 			double eY = atof(words[2].c_str());
 			double eZ = atof(words[3].c_str());
@@ -993,19 +1164,20 @@ void modeSwitch(string command) {
 			double pmH = atof(words[8].c_str());
 			double pmY = atof(words[9].c_str());
 			double pmTheta = atof(words[10].c_str());
-			static double negativeEyeMatrix[4][4] = { 1.0, 0.0, 0.0, -1.0 * eX,
+			//EM
+			double negativeEyeMatrix[4][4] = { 1.0, 0.0, 0.0, -1.0 * eX,
 													  0.0, 1.0, 0.0, -1.0 * eY,
 													  0.0, 0.0, 1.0, -1.0 * eZ,
 													  0.0, 0.0, 0.0, 1.0 };
-			static double GRM[4][4] = { 1.0, 0.0, 0.0, 0.0,
+			double GRM[4][4] = { 1.0, 0.0, 0.0, 0.0,
 										0.0, 1.0, 0.0, 0.0,
 										0.0, 0.0, 1.0, 0.0,
 										0.0, 0.0, 0.0, 1.0 };
-			static double mirrorMatrix[4][4] = { -1.0, 0.0, 0.0, 0.0,
+			double mirrorMatrix[4][4] = { -1.0, 0.0, 0.0, 0.0,
 										0.0, 1.0, 0.0, 0.0,
 										0.0, 0.0, 1.0, 0.0,
 										0.0, 0.0, 0.0, 1.0 };
-			static double tiltMatrix[4][4] = { 1.0, 0.0, 0.0, 0.0,
+			double tiltMatrix[4][4] = { 1.0, 0.0, 0.0, 0.0,
 										0.0, 1.0, 0.0, 0.0,
 										0.0, 0.0, 1.0, 0.0,
 										0.0, 0.0, 0.0, 1.0 };
@@ -1030,99 +1202,238 @@ void modeSwitch(string command) {
 			GRM[2][0] = v3.getX() / lenV3;
 			GRM[2][1] = v3.getY() / lenV3;
 			GRM[2][2] = v3.getZ() / lenV3;
-			cout << "GRM:" << endl;
-			matrixOutput(GRM);
-			cout << "mirror:" << endl;
-			matrixOutput(mirrorMatrix);
+
 			tiltMatrix[0][0] = cos(angleToRadian(tilt));
 			tiltMatrix[0][1] = sin(angleToRadian(tilt));
 			tiltMatrix[1][0] = -1.0 * sin(angleToRadian(tilt));
 			tiltMatrix[1][1] = cos(angleToRadian(tilt));
-			cout << "tile:" << endl;
-			matrixOutput(tiltMatrix);
+
 			calMMulM(tiltMatrix, mirrorMatrix, tempMatrix0);
-			calMMulM(tempMatrix0, GRM, tempMatrix0);
-			calMMulM(tempMatrix0, negativeEyeMatrix, EM);
 
+			calMMulM(GRM, negativeEyeMatrix, tempMatrix1);
+
+			calMMulM(tempMatrix0, tempMatrix1, EM);
+			/*cout << "tiltMatrix X mirrorMatrix:" << endl;
+			matrixOutput(tempMatrix0);
+			cout << "GRM X negativeEyeMatrix:" << endl;
+			matrixOutput(tempMatrix1);*/
+			/*	cout << "GRM:" << endl;
+				matrixOutput(GRM);
+				cout << "mirror:" << endl;
+				matrixOutput(mirrorMatrix);
+				cout << "tile:" << endl;
+				matrixOutput(tiltMatrix);*/
+			cout << "EM" << endl;
+			matrixOutput(EM);
+			//PM
 			calPM(pmH, pmY, pmTheta);
-		}
-
-		else if (words[0] == "object") {
-			//cout << "object??????" << endl;
-			string lineInFile;
-			char space_char = ' ';
-			vector<string> s{};
-			string objectFileName = words[1].c_str();
-
-			objectFile.open(objectFileName);
-			if (!objectFile.is_open()) {
-				perror("Error open");
-				exit(EXIT_FAILURE);
-			}
-			getline(objectFile, lineInFile);
-			//cout << lineInFile << endl;
-
-			istringstream iss(lineInFile);
-			for (string command; iss >> command; ) {
-				s.push_back(command);
-			}
-			int pointNum = atoi(s[0].c_str());
-			int planeNum = atoi(s[1].c_str());
-			objectBase objectTemp;
-			for (int i = 0; i < pointNum; i++)
-			{
-				getline(objectFile, lineInFile);
-
-				cout << lineInFile << endl;
-
-				s.clear();
-				istringstream iss(lineInFile);
-				for (string command; iss >> command; ) {
-					s.push_back(command);
-				}
-
-				objectTemp.pList.push_back(point3DInDouble(atof(s[0].c_str()), atof(s[1].c_str()), atof(s[2].c_str()), 1));
-
-			}
-			poly polyTemp;
-			for (int i = 0; i < planeNum; i++)
-			{
-				getline(objectFile, lineInFile);
-
-				cout << lineInFile << endl;
-
-				s.clear();
-				istringstream iss(lineInFile);
-				for (string command; iss >> command; ) {
-					s.push_back(command);
-				}
-				polyTemp.n = atoi(s[0].c_str());
-				for (int i = 1; i < s.size(); i++)
-				{
-					polyTemp.pointNO.push_back(atoi(s[i].c_str()));
-					//cout << s[i]<<endl;
-				}
-				objectTemp.plane.push_back(polyTemp);
-
-			}
-			objs.push_back(objectTemp);
-			objectFile.close();
 		}
 		else if (words[0] == "viewport")
 		{
+			cout << "viewport" << endl << "PM" << endl;
 			double vxl = atof(words[1].c_str());
 			double vxr = atof(words[2].c_str());
 			double vyb = atof(words[3].c_str());
 			double vyt = atof(words[4].c_str());
 			//aspect ratio for pm
 			PM[1][1] = (vxr - vxl) / (vyt - vyb);
+			matrixOutput(PM);
+			//Window to Viewport Transformation
+			double wxr = 1.0, wxl = -1.0, wyt = 1.0, wyb = -1.0;
+			double Sx = ((vxr - vxl) / (wxr - wxl)) / (wxr - wxl) * windowW;  //(wxr - wxl)=2
+			double Sy = ((vyt - vyb) / (wyt - wyb)) / (wyt - wyb) * windowH;  //(wyt - wyb)=2
+			double Xratio = (vxl - wxl) / (wxr - wxl);
+			double Yratio = (vyb - wyb) / (wyt - wyb);
+			//Xv = (vxl + (Xw - wxl) * Sx); //wxl=-1
+			//Yv = (vyb + (Yw - wyb) * Sy); //wyB=-1
+			//cal wvm
+			double TnegativeW[4][4] = { 1.0, 0.0, 0.0, -wxl,
+										0.0, 1.0, 0.0, -wyb,
+										0.0, 0.0, 1.0, 0.0,
+										0.0, 0.0, 0.0, 1.0 };
+			double Tv[4][4] = { 1.0, 0.0, 0.0, Xratio * windowW,
+								0.0, 1.0, 0.0, Yratio * windowH,
+								0.0, 0.0, 1.0, 0.0,
+								0.0, 0.0, 0.0, 1.0 };
+			double S[4][4] = { Sx , 0.0, 0.0, 0.0,
+							   0.0, Sy , 0.0, 0.0,
+							   0.0, 0.0, 1.0, 0.0,
+							   0.0, 0.0, 0.0, 1.0 };
+			double temp[4][4];
 
+			for (int i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
+					temp[i][j] = 0;
+					for (int k = 0; k < 4; k++) {
+						temp[i][j] += S[i][k] * TnegativeW[k][j];
+					}
+				}
+			}
+			for (int i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
+					wvm[i][j] = 0;
+					for (int k = 0; k < 4; k++) {
+						wvm[i][j] += Tv[i][k] * temp[k][j];
+					}
+				}
+			}
+			//cout << "viewport fin" << endl;
 		}
 		else if (words[0] == "display") {
+			pointList.clear();
+			cout << "display" << endl;
+			vector<objectBase> objsInDisplay;
+			//cal wvm*pm*em*transformation*point?????????
 
+
+
+			//PM*EM->PMMulEM
+			calMMulM(PM, EM, PMMulEM);
+			//cout << "pm*em:" << endl;
+			//matrixOutput(PMMulEM);
+
+
+			//pm*em*transformation*point
+			//cout << "pm*em*t*p start" << endl;
+
+			for (int i = 0; i < objs.size(); i++)
+			{
+				objectBase objTemp;
+				for (int j = 0; j < objs[i].plane.size(); j++)
+				{
+					poly planeTemp;
+					planeTemp.n = 0;
+					for (int k = 0; k < objs[i].plane[j].pointInPoly.size(); k++)
+					{
+
+						point3DInDouble p_new(0.0, 0.0, 0.0);
+						//cout << "p: " << p.getX() << " " << p.getY()<<" "<< p.getZ() << " " << p.getW() << endl;
+						p_new = calMMulP(PMMulEM, objs[i].plane[j].pointInPoly[k]);
+						planeTemp.pointInPoly.push_back(p_new);
+						planeTemp.n += 1;
+
+						//cout << "p_new: " << p_new.getX() << " " << p_new.getY()<<" "<< p_new.getZ() << " " << p_new.getW() << endl;
+
+					}
+					objTemp.plane.push_back(planeTemp);
+				}
+				objsInDisplay.push_back(objTemp);
+
+			}
+			//cout << "pm*em*t*p fin" << endl;
+
+			//clipping
+			objsInDisplay = clipping(objsInDisplay);
+			//cout << "clipping fin" << endl;
+
+
+			//perspective divide
+			for (int i = 0; i < objsInDisplay.size(); i++)
+			{
+				for (int j = 0; j < objsInDisplay[i].plane.size(); j++)
+				{
+					for (int k = 0; k < objsInDisplay[i].plane[j].pointInPoly.size(); k++)
+					{
+						double wTemp = objsInDisplay[i].plane[j].pointInPoly[k].getW();
+						objsInDisplay[i].plane[j].pointInPoly[k].setX(objsInDisplay[i].plane[j].pointInPoly[k].getX() / wTemp);
+						objsInDisplay[i].plane[j].pointInPoly[k].setY(objsInDisplay[i].plane[j].pointInPoly[k].getY() / wTemp);
+						objsInDisplay[i].plane[j].pointInPoly[k].setZ(objsInDisplay[i].plane[j].pointInPoly[k].getZ() / wTemp);
+						objsInDisplay[i].plane[j].pointInPoly[k].setW(1);
+					}
+				}
+			}
+			//cout << "perspective divide fin" << endl;
+			for (int i = 0; i < objsInDisplay.size(); i++)
+			{
+				for (int j = 0; j < objsInDisplay[i].plane.size(); j++)
+				{
+					//cout << i << "plane " << j << endl;
+					for (int k = 0; k < objsInDisplay[i].plane[j].pointInPoly.size(); k++)
+					{
+						//cout << "clipped: " << objsInDisplay[i].plane[j].pointInPoly[k].getX() << " " << objsInDisplay[i].plane[j].pointInPoly[k].getY() << " " << objsInDisplay[i].plane[j].pointInPoly[k].getZ() << " " << objsInDisplay[i].plane[j].pointInPoly[k].getW() << " " << endl;
+					}
+				}
+			}
+			//nobackfaces
+			if (nobackfaces)
+			{
+				//cout << "no back" << endl;
+				for (int i = 0; i < objsInDisplay.size(); i++)
+				{
+					//cout << i<<" ";
+					for (int j = 0; j < objsInDisplay[i].plane.size(); j++)
+					{
+						//cout << j<<" \n";
+						if (objsInDisplay[i].plane[j].pointInPoly.empty() == false)
+						{
+							//get 2 point in the plane to cross ,then get the normal vector of the plane
+							point3DInDouble a(0.0, 0.0, 0.0), b(0.0, 0.0, 0.0), aXb(0.0, 0.0, 0.0);
+							a.setX(objsInDisplay[i].plane[j].pointInPoly[1].getX() - objsInDisplay[i].plane[j].pointInPoly[0].getX());
+							a.setY(objsInDisplay[i].plane[j].pointInPoly[1].getY() - objsInDisplay[i].plane[j].pointInPoly[0].getY());
+							a.setZ(objsInDisplay[i].plane[j].pointInPoly[1].getZ() - objsInDisplay[i].plane[j].pointInPoly[0].getZ());
+							b.setX(objsInDisplay[i].plane[j].pointInPoly[2].getX() - objsInDisplay[i].plane[j].pointInPoly[1].getX());
+							b.setY(objsInDisplay[i].plane[j].pointInPoly[2].getY() - objsInDisplay[i].plane[j].pointInPoly[1].getY());
+							b.setZ(objsInDisplay[i].plane[j].pointInPoly[2].getZ() - objsInDisplay[i].plane[j].pointInPoly[1].getZ());
+							aXb = cross(a, b);
+							//cout << "0:" << objsInDisplay[i].plane[j].pointInPoly[0].getX() << " " << objsInDisplay[i].plane[j].pointInPoly[0].getY() << " " << objsInDisplay[i].plane[j].pointInPoly[0].getZ() << " " << objsInDisplay[i].plane[j].pointInPoly[0].getW() << endl;
+							//cout << "1:" << objsInDisplay[i].plane[j].pointInPoly[1].getX() << " " << objsInDisplay[i].plane[j].pointInPoly[1].getY() << " " << objsInDisplay[i].plane[j].pointInPoly[1].getZ() << " " << objsInDisplay[i].plane[j].pointInPoly[1].getW() << endl;
+							//cout << "2:" << objsInDisplay[i].plane[j].pointInPoly[2].getX() << " " << objsInDisplay[i].plane[j].pointInPoly[2].getY() << " " << objsInDisplay[i].plane[j].pointInPoly[2].getZ() << " " << objsInDisplay[i].plane[j].pointInPoly[2].getW() << endl;
+							//cout << "a:" << a.getX() << " " << a.getY() << " " << a.getZ() << " " << a.getW() << endl;
+							//cout << "b:" << b.getX() << " " << b.getY() << " " << b.getZ() << " " << b.getW() << endl;
+							//cout << "a x b:" << aXb.getX() << " " << aXb.getY() << " " << aXb.getZ() << " " << aXb.getW() << endl;
+
+							if (aXb.getZ() >= 0)
+							{
+								//cout << "unvisible" << endl;
+								objsInDisplay[i].plane[j].visible = false;
+							}
+						}
+						else
+						{
+							objsInDisplay[i].plane[j].visible = false;
+						}
+					}
+				}
+			}
+			//cout << "nobackfaces fin" << endl;
+			//matrixOutput(wvm);
+			//window to view
+			//matrixOutput(wvm);
+			for (int i = 0; i < objsInDisplay.size(); i++)
+			{
+				for (int j = 0; j < objsInDisplay[i].plane.size(); j++)
+				{
+					for (int k = 0; k < objsInDisplay[i].plane[j].pointInPoly.size(); k++)
+					{
+						if (objsInDisplay[i].plane[j].visible)
+						{
+							int bNum;
+							if (k == objsInDisplay[i].plane[j].pointInPoly.size() - 1) {
+								bNum = 0;
+							}
+							else {
+								bNum = k + 1;
+							}
+							point a = cal2DP(wvm, objsInDisplay[i].plane[j].pointInPoly[k]);
+							point b = cal2DP(wvm, objsInDisplay[i].plane[j].pointInPoly[bNum]);
+							//cout << "drawline a: " << a.getX() << " " << a.getY() << " b: " << b.getX() << " " << b.getY() << endl;
+							
+							drawLine(a, b);
+						}
+
+
+					}
+				}
+			}
+			
+			drawBorder(-1.0,1.0,-1.0,1.0);
+			//cout << "WtoV fin" << endl;
+
+			drawAllPoint();
+			system("pause");
 		}
 		else if (words[0] == "nobackfaces") {
-
+			nobackfaces = true;
 		}
 		//else if (words[0] == "square")
 		//{
@@ -1247,20 +1558,16 @@ void modeSwitch(string command) {
 		//}
 		else if (words[0] == "reset")
 		{
+			resetTM();
+			//pointList.clear();
 			//cout << "--reset--" << endl;
-			for (int i = 0; i < 4; i++)
-			{
-				for (int j = 0; j < 4; j++)
-				{
-					transformationMatrix3D[i][j] = defaultMatrix3D[i][j];
-				}
-			}
+
 		}
 		else if (words[0] == "end")
 		{
 
 			//cout << "end" << endl;
-
+			//system("pause");
 			quit();
 		}
 		else if (words[0] == "#") {
@@ -1276,8 +1583,8 @@ void modeSwitch(string command) {
 			}*/
 		else {  // "NULL" or
 		//skip
-			system("pause");
-			cout << "skip" << endl;
+			//system("pause");
+			//cout << "skip" << endl;
 		}
 	}
 }
@@ -1473,7 +1780,7 @@ int main(int argc, char** argv) {
 	}
 	windowW = atoi(words[0].c_str());
 	windowH = atoi(words[1].c_str());
-	cout << "glut window size " << windowW << "x" << windowH << endl;
+	//cout << "glut window size " << windowW << "x" << windowH << endl;
 	inputFile.close();
 
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
